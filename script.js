@@ -57,7 +57,7 @@ const API_CONFIG = {
   // Replace with your actual Google Apps Script Web App URLs
   endpoints: {
     alumni: 'https://script.google.com/macros/s/YOUR_ALUMNI_SCRIPT_ID/exec',
-    nsrp: 'https://script.google.com/macros/s/YOUR_NSRP_SCRIPT_ID/exec',
+    nsrp: 'https://script.google.com/macros/s/AKfycbzBJ6moUMp90X4xOl9UVhP6hs38MSXpp381Dggi1XvcOipZMyfcrPGxuYTGZMOrfZlw/exec',
     jops: 'https://script.google.com/macros/s/YOUR_JOPS_SCRIPT_ID/exec',
     legs: 'https://script.google.com/macros/s/YOUR_LEGS_SCRIPT_ID/exec',
     stats: 'https://script.google.com/macros/s/YOUR_STATS_SCRIPT_ID/exec'
