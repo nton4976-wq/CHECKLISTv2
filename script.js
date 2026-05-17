@@ -503,9 +503,7 @@ class DashboardApp {
     navigateTo(page) {
         this.currentPage = page;
         this.currentFilter = 'all';
-        this.currentSearch = '';
-        document.getElementById('global-search').value = '';
-
+        // Keep currentSearch persistent across modules
         const mod = MODULES[page];
         this.currentSort = mod.defaultSort ? { ...mod.defaultSort } : { column: null, direction: 'asc' };
         this.pagination.page = 1;
@@ -525,8 +523,7 @@ class DashboardApp {
         const mod = MODULES[this.currentPage];
         const content = document.getElementById('page-content');
 
-        let html = `<div class="page-header"><h1 class="page-title">${mod.title}</h1><p class="page-subtitle">${mod.subtitle}</p></div>`;
-        html += this.renderModuleTable(this.currentPage);
+        let html = this.renderModuleTable(this.currentPage);
         content.innerHTML = html;
         this.updateLastUpdated();
     }
@@ -660,7 +657,6 @@ class DashboardApp {
         const filtered = this.filterRecords(records, page);
         const sorted = this.sortRecords(filtered, page);
         const paginated = this.getPaginatedRecords(sorted);
-        const stats = this.calculateStats(filtered, page);
         const visibleColumns = mod.columns.filter(c => this.isColumnVisible(page, c.key));
 
         let rowsHtml = '';
@@ -688,36 +684,40 @@ class DashboardApp {
         const duplicateBanner = dupCount > 0 ? this.renderDuplicateBanner(dupCount) : '';
         const searchCount = this.currentSearch ? `<span class="search-results-badge"><i class="fas fa-search"></i> ${filtered.length} result${filtered.length !== 1 ? 's' : ''} for "${this.escapeHtml(this.currentSearch)}"</span>` : '';
 
+        // Combined controls bar: merges old toolbar + column filters into one clean bar
+        const controlsBar = `<div class="table-controls-bar">
+            <div class="controls-left">
+                ${this.renderFilterTabs(page)}
+                ${freshness}
+                ${searchCount}
+            </div>
+            <div class="controls-center">
+                ${columnFilterDropdowns}
+            </div>
+            <div class="controls-right">
+                <div class="density-toggle">
+                    <button class="density-btn ${this.settings.tableDensity === 'compact' ? 'active' : ''}" onclick="app.setTableDensity('compact')" title="Compact"><i class="fas fa-compress"></i></button>
+                    <button class="density-btn ${this.settings.tableDensity === 'normal' ? 'active' : ''}" onclick="app.setTableDensity('normal')" title="Normal"><i class="fas fa-grip-lines"></i></button>
+                    <button class="density-btn ${this.settings.tableDensity === 'comfortable' ? 'active' : ''}" onclick="app.setTableDensity('comfortable')" title="Comfortable"><i class="fas fa-expand"></i></button>
+                </div>
+                <div class="column-toggle">
+                    <button class="btn btn-secondary btn-sm" onclick="app.toggleColumnMenu(event)" title="Columns"><i class="fas fa-columns"></i></button>
+                    <div class="column-toggle-menu" id="column-menu-${page}">
+                        ${mod.columns.map(c => `
+                            <label class="column-toggle-item">
+                                <input type="checkbox" ${this.isColumnVisible(page, c.key) ? 'checked' : ''} onchange="app.toggleColumn('${page}', '${c.key}', this.checked)">
+                                ${c.label}
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="app.fetchModuleData('${page}')" title="Refresh" id="refresh-btn-${page}"><i class="fas fa-rotate"></i></button>
+                <button class="btn btn-secondary btn-sm" onclick="app.exportCurrentModule()"><i class="fas fa-download"></i> CSV</button>
+            </div>
+        </div>`;
+
         return duplicateBanner +
-            this.renderStatsCards(stats, page, dupCount) +
-            `<div class="table-toolbar">
-                <div class="toolbar-left">
-                    ${this.renderFilterTabs(page)}
-                    ${freshness}
-                    ${searchCount}
-                </div>
-                <div class="toolbar-right">
-                    <div class="density-toggle">
-                        <button class="density-btn ${this.settings.tableDensity === 'compact' ? 'active' : ''}" onclick="app.setTableDensity('compact')" title="Compact"><i class="fas fa-compress"></i></button>
-                        <button class="density-btn ${this.settings.tableDensity === 'normal' ? 'active' : ''}" onclick="app.setTableDensity('normal')" title="Normal"><i class="fas fa-grip-lines"></i></button>
-                        <button class="density-btn ${this.settings.tableDensity === 'comfortable' ? 'active' : ''}" onclick="app.setTableDensity('comfortable')" title="Comfortable"><i class="fas fa-expand"></i></button>
-                    </div>
-                    <div class="column-toggle">
-                        <button class="btn btn-secondary btn-sm" onclick="app.toggleColumnMenu(event)" title="Columns"><i class="fas fa-columns"></i></button>
-                        <div class="column-toggle-menu" id="column-menu-${page}">
-                            ${mod.columns.map(c => `
-                                <label class="column-toggle-item">
-                                    <input type="checkbox" ${this.isColumnVisible(page, c.key) ? 'checked' : ''} onchange="app.toggleColumn('${page}', '${c.key}', this.checked)">
-                                    ${c.label}
-                                </label>
-                            `).join('')}
-                        </div>
-                    </div>
-                    <button class="btn btn-secondary btn-sm" onclick="app.fetchModuleData('${page}')" title="Refresh" id="refresh-btn-${page}"><i class="fas fa-rotate"></i></button>
-                    <button class="btn btn-secondary btn-sm" onclick="app.exportCurrentModule()"><i class="fas fa-download"></i> CSV</button>
-                </div>
-            </div>` +
-            columnFilterDropdowns +
+            controlsBar +
             (rowsHtml ? this.renderTableWrapper(visibleColumns, rowsHtml) : this.renderEmptyState('No records match your filters.')) +
             `<div class="cards-view">${cardsHtml || this.renderEmptyState('No records match your filters.')}</div>` +
             this.renderPagination(paginated.total, this.pagination.page, this.pagination.perPage);
@@ -1440,6 +1440,9 @@ class DashboardApp {
     initSearchClear() {
         const input = document.getElementById('global-search');
         const btn = document.getElementById('search-clear-btn');
+        if (input && this.currentSearch) {
+            input.value = this.currentSearch;
+        }
         if (input && btn && input.value) btn.classList.add('visible');
     }
 
