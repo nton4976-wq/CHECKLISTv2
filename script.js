@@ -7,7 +7,9 @@ const CONFIG = {
     DEBOUNCE_MS: 150,
     STALE_THRESHOLD_MS: 300000,
     AUTO_REFRESH_INTERVAL_MS: 60000,
-    LIVE_INDICATOR_DURATION_MS: 2000
+    LIVE_INDICATOR_DURATION_MS: 2000,
+    // Paste your Config Web App URL here to auto-load for all users
+    DEFAULT_CONFIG_URL: 'https://script.google.com/macros/s/AKfycbzmuLzINxTAr11Gp8xLVs1hEr_vu5hU4I_oIFT9foEFhv7y5QBKgs70I04VZywz8wjJ/exec'
 };
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -232,7 +234,11 @@ class DashboardApp {
     }
 
     async loadEndpointsGlobal() {
-        const configUrl = localStorage.getItem('dashboard_config_endpoint');
+        // Try localStorage first, then hardcoded default
+        let configUrl = localStorage.getItem('dashboard_config_endpoint');
+        if (!configUrl && CONFIG.DEFAULT_CONFIG_URL) {
+            configUrl = CONFIG.DEFAULT_CONFIG_URL;
+        }
         if (!configUrl) return;
         try {
             const res = await fetch(configUrl + '?action=getEndpoints', { redirect: 'follow' });
@@ -253,7 +259,10 @@ class DashboardApp {
     }
 
     async saveEndpointsGlobal() {
-        const configUrl = localStorage.getItem('dashboard_config_endpoint');
+        let configUrl = localStorage.getItem('dashboard_config_endpoint');
+        if (!configUrl && CONFIG.DEFAULT_CONFIG_URL) {
+            configUrl = CONFIG.DEFAULT_CONFIG_URL;
+        }
         if (!configUrl) return;
         try {
             // Build query string with all endpoints (GET = no CORS preflight)
@@ -1485,7 +1494,7 @@ class DashboardApp {
         if (configInput) {
             const configVal = configInput.value.trim();
             if (configVal) localStorage.setItem('dashboard_config_endpoint', configVal);
-            else localStorage.removeItem('dashboard_config_endpoint');
+            else if (!CONFIG.DEFAULT_CONFIG_URL) localStorage.removeItem('dashboard_config_endpoint');
         }
         Object.values(MODULES).forEach(mod => {
             const val = document.getElementById(`ep-${mod.endpointKey}`).value.trim();
