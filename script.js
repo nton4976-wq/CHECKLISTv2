@@ -87,18 +87,14 @@ const MODULES = {
         icon: 'fa-chalkboard-user',
         dataKey: 'legsEvaluation',
         endpointKey: 'legs-evaluation',
-        filters: ['All', 'Complete', 'Incomplete'],
+        filters: ['All'],
         defaultSort: { column: 'fullName', direction: 'asc' },
         columns: [
             { key: 'timestamp', label: 'Timestamp', sortable: true, format: 'customDate' },
             { key: 'fullName', label: 'Full Name', sortable: true, computed: false },
             { key: 'email', label: 'Email Address', sortable: true },
             { key: 'college', label: 'College/Campus', sortable: true, filterable: true },
-            { key: 'degree', label: 'Degree & Specialization', sortable: true, filterable: true },
-            { key: 'webinar', label: 'Webinar', sortable: true, filterable: true },
-            { key: 'date', label: 'Date', sortable: true },
-            { key: 'evaluation', label: 'Evaluation', sortable: true, filterable: true },
-            { key: 'status', label: 'Status', sortable: true, filterable: true }
+            { key: 'degree', label: 'Degree & Specialization', sortable: true, filterable: true }
         ]
     }
 };
@@ -150,8 +146,59 @@ class DashboardApp {
         this.loadColumnFilters();
         this.bindEvents();
         this.initSearchClear();
-        this.navigateTo('alumni-info');
-        this.fetchAllDataOnInit();
+        this.checkLogin();
+        // Try loading global endpoints after login
+        setTimeout(() => this.loadEndpointsGlobal(), 500);
+    }
+
+    checkLogin() {
+        const session = sessionStorage.getItem('dashboard_session');
+        if (session === 'authenticated') {
+            this.hideLogin();
+            this.navigateTo('alumni-info');
+            this.fetchAllDataOnInit();
+        }
+    }
+
+    handleLogin(e) {
+        e.preventDefault();
+        const user = document.getElementById('login-user').value.trim();
+        const pass = document.getElementById('login-pass').value;
+        const errorEl = document.getElementById('login-error');
+        const card = document.querySelector('.login-card');
+
+        if (user === 'AdminTon' && pass === '4CaresCheqList') {
+            errorEl.textContent = '';
+            sessionStorage.setItem('dashboard_session', 'authenticated');
+            card.style.animation = 'loginSlideOut 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards';
+            setTimeout(() => {
+                this.hideLogin();
+                this.navigateTo('alumni-info');
+                this.fetchAllDataOnInit();
+            }, 500);
+        } else {
+            errorEl.textContent = 'Invalid username or password';
+            card.style.animation = 'none';
+            card.offsetHeight; // trigger reflow
+            card.style.animation = 'shake 0.4s ease';
+        }
+    }
+
+    hideLogin() {
+        const overlay = document.getElementById('login-overlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+            setTimeout(() => overlay.style.display = 'none', 600);
+        }
+    }
+
+    togglePassword() {
+        const input = document.getElementById('login-pass');
+        const icon = document.getElementById('eye-icon');
+        if (!input || !icon) return;
+        const isHidden = input.type === 'password';
+        input.type = isHidden ? 'text' : 'password';
+        icon.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
     }
 
     loadSettings() {
@@ -179,11 +226,50 @@ class DashboardApp {
 
     loadEndpointsFromStorage() {
         const ep = localStorage.getItem('dashboard_endpoints');
-        if (ep) this.endpoints = JSON.parse(ep);
+        if (ep) {
+            try { this.endpoints = JSON.parse(ep); } catch (e) {}
+        }
+    }
+
+    async loadEndpointsGlobal() {
+        const configUrl = localStorage.getItem('dashboard_config_endpoint');
+        if (!configUrl) return;
+        try {
+            const res = await fetch(configUrl + '?action=getEndpoints', { redirect: 'follow' });
+            const data = await res.json();
+            if (data.success && data.endpoints) {
+                this.endpoints = data.endpoints;
+                localStorage.setItem('dashboard_endpoints', JSON.stringify(this.endpoints));
+                this.showToast('URLs loaded from Google Sheet', 'success');
+            }
+        } catch (err) {
+            console.warn('Global load failed:', err);
+        }
     }
 
     saveEndpointsToStorage() {
         localStorage.setItem('dashboard_endpoints', JSON.stringify(this.endpoints));
+        this.saveEndpointsGlobal();
+    }
+
+    async saveEndpointsGlobal() {
+        const configUrl = localStorage.getItem('dashboard_config_endpoint');
+        if (!configUrl) return;
+        try {
+            // Build query string with all endpoints (GET = no CORS preflight)
+            const params = new URLSearchParams();
+            params.set('action', 'saveEndpoints');
+            Object.entries(this.endpoints).forEach(([key, val]) => {
+                if (val) params.set('ep-' + key.replace('alumni-info','alumni').replace('nsrp-registration','nsrp').replace('jops-evaluation','jops').replace('legs-participation','legs-part').replace('legs-evaluation','legs-eval'), val);
+            });
+            const response = await fetch(configUrl + '?' + params.toString(), { redirect: 'follow' });
+            const result = await response.json();
+            if (result.success) {
+                this.showToast('URLs saved to Google Sheet', 'success');
+            }
+        } catch (err) {
+            console.warn('Global save failed:', err);
+        }
     }
 
     loadLastFetch() {
@@ -439,15 +525,33 @@ class DashboardApp {
         if (!silent) this.renderPage();
 
         try {
-            const response = await fetch(url + '?action=getData');
+            const response = await fetch(url + '?action=getData&sheet=' + encodeURIComponent(mod.dataKey));
             const result = await response.json();
-            if (result.success && Array.isArray(result.data)) {
-                this.data[mod.dataKey] = result.data;
+            if (result.success) {
+                // Handle empty/new sheets gracefully
+                this.data[mod.dataKey] = Array.isArray(result.data) ? result.data : [];
                 this.lastFetch[page] = Date.now();
                 this.saveLastFetch();
-                if (showToast) this.showToast(`${mod.title} refreshed — ${result.data.length} records`, 'success');
+                const count = this.data[mod.dataKey].length;
+                if (showToast) {
+                    if (count === 0 && result.rowCount === 0) {
+                        this.showToast(`${mod.title} ready — sheet is empty`, 'info');
+                    } else {
+                        this.showToast(`${mod.title} refreshed — ${count} records`, 'success');
+                    }
+                }
             } else {
-                throw new Error(result.message || 'Invalid response');
+                // Backend might not support sheet param yet, try legacy endpoint
+                const legacyRes = await fetch(url + '?action=getData');
+                const legacyResult = await legacyRes.json();
+                if (legacyResult.success && Array.isArray(legacyResult.data)) {
+                    this.data[mod.dataKey] = legacyResult.data;
+                    this.lastFetch[page] = Date.now();
+                    this.saveLastFetch();
+                    if (showToast) this.showToast(`${mod.title} refreshed — ${legacyResult.data.length} records`, 'success');
+                } else {
+                    throw new Error(result.message || legacyResult.message || 'Invalid response');
+                }
             }
         } catch (err) {
             console.error(`Fetch error [${page}]:`, err);
@@ -1354,7 +1458,15 @@ class DashboardApp {
 
     openSettingsModal() {
         const container = document.getElementById('endpoint-inputs');
-        let html = '';
+        const configEp = localStorage.getItem('dashboard_config_endpoint') || '';
+        let html = `
+            <div class="form-group">
+                <label><i class="fas fa-globe"></i> Global Config Endpoint (optional)</label>
+                <input type="url" class="form-input" id="ep-config" placeholder="https://script.google.com/..." value="${this.escapeHtml(configEp)}">
+                <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.35rem;">If set, endpoints are saved globally and shared across devices.</p>
+            </div>
+            <hr style="border:0;border-top:1px solid var(--border-light);margin:1rem 0;">
+        `;
         Object.values(MODULES).forEach(mod => {
             const current = this.endpoints[mod.endpointKey] || '';
             html += `
@@ -1368,7 +1480,13 @@ class DashboardApp {
         this.openModal('settings-modal');
     }
 
-    saveEndpoints() {
+    async saveEndpoints() {
+        const configInput = document.getElementById('ep-config');
+        if (configInput) {
+            const configVal = configInput.value.trim();
+            if (configVal) localStorage.setItem('dashboard_config_endpoint', configVal);
+            else localStorage.removeItem('dashboard_config_endpoint');
+        }
         Object.values(MODULES).forEach(mod => {
             const val = document.getElementById(`ep-${mod.endpointKey}`).value.trim();
             if (val) this.endpoints[mod.endpointKey] = val;
@@ -1379,6 +1497,8 @@ class DashboardApp {
         this.showToast('Data sources saved');
         this.fetchAllDataOnInit();
     }
+
+
 
     openModal(id) {
         document.getElementById(id).classList.remove('hidden');
