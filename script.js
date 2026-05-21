@@ -9,7 +9,7 @@ const CONFIG = {
     AUTO_REFRESH_INTERVAL_MS: 60000,
     LIVE_INDICATOR_DURATION_MS: 2000,
     // Paste your Config Web App URL here to auto-load for all users
-    DEFAULT_CONFIG_URL: 'https://script.google.com/macros/s/AKfycbzmuLzINxTAr11Gp8xLVs1hEr_vu5hU4I_oIFT9foEFhv7y5QBKgs70I04VZywz8wjJ/exec'
+    DEFAULT_CONFIG_URL: ''
 };
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -72,7 +72,7 @@ const MODULES = {
         icon: 'fa-graduation-cap',
         dataKey: 'legsParticipation',
         endpointKey: 'legs-participation',
-        filters: ['All'],
+        filters: ['All', 'Green Checks'],
         defaultSort: { column: 'fullName', direction: 'asc' },
         columns: [
             { key: 'schedule', label: 'Webinar Schedule', sortable: true, filterable: true },
@@ -762,12 +762,12 @@ class DashboardApp {
             return this.renderSetupEmptyState(page);
         }
 
-        // Update duplicate detection
-        this.updateDuplicateNames(records);
-        const duplicates = this.findDuplicates(records);
-        const dupCount = duplicates.size;
-
         const filtered = this.filterRecords(records, page);
+
+        // Update duplicate detection based on filtered results
+        this.updateDuplicateNames(filtered);
+        const duplicates = this.findDuplicates(filtered);
+        const dupCount = duplicates.size;
         const sorted = this.sortRecords(filtered, page);
         const paginated = this.getPaginatedRecords(sorted);
         const visibleColumns = mod.columns.filter(c => this.isColumnVisible(page, c.key));
@@ -1469,7 +1469,11 @@ class DashboardApp {
 
         // Status filter tabs
         if (this.currentFilter !== 'all') {
-            filtered = filtered.filter(r => (r.status || '').toLowerCase() === this.currentFilter);
+            if (page === 'legs-participation' && this.currentFilter === 'green checks') {
+                filtered = filtered.filter(r => this.isScheduleMatch(r, page));
+            } else {
+                filtered = filtered.filter(r => (r.status || '').toLowerCase() === this.currentFilter);
+            }
         }
 
         // Column-specific filters
