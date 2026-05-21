@@ -75,12 +75,12 @@ const MODULES = {
         filters: ['All'],
         defaultSort: { column: 'fullName', direction: 'asc' },
         columns: [
+            { key: 'schedule', label: 'Webinar Schedule', sortable: true, filterable: true },
             { key: 'timestamp', label: 'Timestamp', sortable: true, format: 'customDate' },
             { key: 'fullName', label: 'Full Name', sortable: true, computed: true },
             { key: 'email', label: 'Email Address', sortable: true },
             { key: 'degree', label: 'Degree & Specialization', sortable: true, filterable: true },
-            { key: 'campus', label: 'Campus', sortable: true, filterable: true },
-            { key: 'schedule', label: 'Webinar Schedule', sortable: true, filterable: true }
+            { key: 'campus', label: 'Campus', sortable: true, filterable: true }
         ]
     },
     'legs-evaluation': {
@@ -392,7 +392,7 @@ class DashboardApp {
         const nameMap = new Map();
 
         records.forEach(r => {
-            const name = this.getFullName(r).toLowerCase().trim();
+            const name = this.getDuplicateNameKey(r);
             if (name && name !== ',' && name !== ' , ') {
                 if (!nameMap.has(name)) {
                     nameMap.set(name, []);
@@ -774,22 +774,25 @@ class DashboardApp {
 
         let rowsHtml = '';
         paginated.records.forEach(r => {
-            const isDuplicate = this.settings.showDuplicates && this.duplicateNames.has(this.getFullName(r).toLowerCase().trim());
+            const isDuplicate = this.settings.showDuplicates && this.duplicateNames.has(this.getDuplicateNameKey(r));
             const isNew = r._isNew;
+            const isMatched = this.isScheduleMatch(r, page);
             const rowClass = [];
             if (isDuplicate) rowClass.push('duplicate-row');
             if (isNew) rowClass.push('new-record');
+            if (isMatched) rowClass.push('schedule-matched');
 
             rowsHtml += `<tr class="${rowClass.join(' ')}">`;
             visibleColumns.forEach(col => {
-                rowsHtml += `<td>${this.renderCell(r, col, page)}</td>`;
+                rowsHtml += `<td>${this.renderCell(r, col, page, isMatched)}</td>`;
             });
             rowsHtml += `</tr>`;
         });
 
         let cardsHtml = '';
         paginated.records.forEach(r => {
-            cardsHtml += this.renderRecordCard(r, page, visibleColumns);
+            const isMatched = this.isScheduleMatch(r, page);
+            cardsHtml += this.renderRecordCard(r, page, visibleColumns, isMatched);
         });
 
         const freshness = this.renderFreshnessBadge(page);
@@ -961,19 +964,36 @@ class DashboardApp {
         return html;
     }
 
-    renderRecordCard(r, page, visibleColumns) {
-        const isDuplicate = this.settings.showDuplicates && this.duplicateNames.has(this.getFullName(r).toLowerCase().trim());
-        const cardClass = isDuplicate ? 'duplicate-card' : '';
+    renderRecordCard(r, page, visibleColumns, isMatched) {
+        const isDuplicate = this.settings.showDuplicates && this.duplicateNames.has(this.getDuplicateNameKey(r));
+        let cardClass = '';
+        if (isDuplicate) cardClass += ' duplicate-card';
+        if (isMatched) cardClass += ' schedule-matched';
 
         let rows = '';
         visibleColumns.forEach(col => {
-            const value = col.computed ? this.formatRow(r, col.key, page) : r[col.key];
-            rows += `<div class="record-card-row"><span class="record-card-label">${col.label}</span><span class="record-card-value">${this.highlightSearch(value)}</span></div>`;
+            let rawValue = col.computed ? this.formatRow(r, col.key, page) : r[col.key];
+
+            // Build mini badge HTML separately
+            let miniBadge = '';
+            if (page === 'legs-participation' && col.key === 'fullName') {
+                if (isMatched) {
+                    miniBadge = ' <span class="mini-check" title="Date & time match schedule"><i class="fas fa-check"></i></span>';
+                } else {
+                    miniBadge = ' <span class="mini-x" title="Date or time does not match schedule"><i class="fas fa-times"></i></span>';
+                }
+            }
+
+            // Highlight search on text only, append badge as raw HTML
+            const textValue = this.highlightSearch(rawValue);
+            const value = textValue + miniBadge;
+
+            rows += `<div class="record-card-row"><span class="record-card-label">${col.label}</span><span class="record-card-value">${value}</span></div>`;
         });
-        return `<div class="record-card ${cardClass}"><div class="record-card-body">${rows}</div></div>`;
+        return `<div class="record-card${cardClass}"><div class="record-card-body">${rows}</div></div>`;
     }
 
-    renderCell(r, col, page) {
+    renderCell(r, col, page, isMatched) {
         let rawValue = col.computed ? this.formatRow(r, col.key, page) : r[col.key];
 
         // Apply custom date formatting
@@ -981,15 +1001,30 @@ class DashboardApp {
             rawValue = this.formatCustomDate(rawValue);
         }
 
-        // Add duplicate badge to name column
-        if (col.key === 'fullName' && this.settings.showDuplicates) {
-            const name = this.getFullName(r).toLowerCase().trim();
-            if (this.duplicateNames.has(name)) {
-                rawValue += ' <span class="duplicate-badge"><i class="fas fa-clone"></i> Duplicate</span>';
+        // Build mini badge HTML separately (not escaped)
+        let miniBadge = '';
+        if (page === 'legs-participation' && col.key === 'fullName') {
+            if (isMatched) {
+                miniBadge = ' <span class="mini-check" title="Date & time match schedule"><i class="fas fa-check"></i></span>';
+            } else {
+                miniBadge = ' <span class="mini-x" title="Date or time does not match schedule"><i class="fas fa-times"></i></span>';
             }
         }
 
-        const value = this.highlightSearch(rawValue);
+        // Add duplicate badge to name column
+        let dupBadge = '';
+        if (col.key === 'fullName' && this.settings.showDuplicates) {
+            const name = this.getDuplicateNameKey(r);
+            if (this.duplicateNames.has(name)) {
+                dupBadge = ' <span class="duplicate-badge"><i class="fas fa-clone"></i> Duplicate</span>';
+            }
+        }
+
+        // Highlight search on the text value only (without badges)
+        const textValue = this.highlightSearch(rawValue);
+
+        // Combine: highlighted text + unescaped HTML badges
+        const value = textValue + miniBadge + dupBadge;
 
         if (page === 'legs-evaluation') {
             if (col.key === 'webinar') return this.renderSelect(rawValue, DROPDOWN_OPTIONS.webinar, 'webinar', r.id, 'app.updateLegsField');
@@ -1057,6 +1092,162 @@ class DashboardApp {
         return `${month}/${day}/${year}(${monthName})${hours}:${minutes}${ampm}`;
     }
 
+    // ============================================
+    // SMART SCHEDULE MATCHING — FIXED & ENHANCED
+    // ============================================
+
+    /**
+     * Robust date extraction → returns M/D/YYYY for comparison
+     */
+    extractDateKey(dateInput) {
+        if (!dateInput) return '';
+
+        // Already a Date object
+        if (dateInput instanceof Date) {
+            return (dateInput.getMonth() + 1) + '/' + dateInput.getDate() + '/' + dateInput.getFullYear();
+        }
+
+        const str = String(dateInput).trim();
+
+        // US format: 5/14/2026
+        const usMatch = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (usMatch) return parseInt(usMatch[1], 10) + '/' + parseInt(usMatch[2], 10) + '/' + usMatch[3];
+
+        // ISO format: 2026-05-14
+        const isoMatch = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) return parseInt(isoMatch[2], 10) + '/' + parseInt(isoMatch[3], 10) + '/' + isoMatch[1];
+
+        // Fallback: native Date parsing
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) {
+            return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
+        }
+
+        return '';
+    }
+
+    /**
+     * Extract date from schedule text: "May 14, 2026 - 8:00 a.m. - 12:00 p.m."
+     */
+    extractScheduleDateKey(scheduleStr) {
+        if (!scheduleStr) return '';
+        const str = String(scheduleStr);
+
+        // "May 14, 2026"
+        const m = str.match(/([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})/);
+        if (m) {
+            const names = ['january','february','march','april','may','june',
+                           'july','august','september','october','november','december'];
+            const idx = names.indexOf(m[1].toLowerCase());
+            if (idx >= 0) return (idx + 1) + '/' + m[2] + '/' + m[3];
+        }
+
+        // Fallback: MM/DD/YYYY hiding in the schedule string
+        const usMatch = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (usMatch) return parseInt(usMatch[1], 10) + '/' + parseInt(usMatch[2], 10) + '/' + usMatch[3];
+
+        return '';
+    }
+
+    isScheduleMatch(r, page) {
+        if (page !== 'legs-participation') return false;
+        const dateOk = this.isDateMatch(r.timestamp, r.schedule);
+        const timeOk = this.isTimeInRange(r.timestamp, r.schedule);
+        return dateOk && timeOk;
+    }
+
+    isDateMatch(timestamp, schedule) {
+        const ts = this.extractDateKey(timestamp);
+        const sc = this.extractScheduleDateKey(schedule);
+        return ts && sc && ts === sc;
+    }
+
+    /**
+     * Smart time-in-range check with multi-format parsing + grace periods
+     */
+    isTimeInRange(timestamp, schedule) {
+        if (!timestamp || !schedule) return false;
+
+        // --- Parse schedule range ---
+        const schedMatch = String(schedule).match(
+            /(\d{1,2}):(\d{2})\s*(a\.?m\.?|p\.?m\.?)\s*-\s*(\d{1,2}):(\d{2})\s*(a\.?m\.?|p\.?m\.?)/i
+        );
+        if (!schedMatch) return false;
+
+        const sH   = parseInt(schedMatch[1], 10);
+        const sM   = parseInt(schedMatch[2], 10);
+        const sAmpm = schedMatch[3].toLowerCase().replace(/\./g, ''); // strip ALL dots
+        const eH   = parseInt(schedMatch[4], 10);
+        const eM   = parseInt(schedMatch[5], 10);
+        const eAmpm = schedMatch[6].toLowerCase().replace(/\./g, ''); // strip ALL dots
+
+        const schedStart = this.toMinutes(sH, sM, sAmpm);
+        const schedEnd   = this.toMinutes(eH, eM, eAmpm);
+
+        // --- Parse timestamp time ---
+        const tsMinutes = this.extractTimestampMinutes(timestamp);
+        if (tsMinutes === null) return false;
+
+        // --- Smart grace periods ---
+        // 15 min before start  → early arrivals still count
+        // 30 min after end    → handles clock skew / stragglers
+        const graceBefore = 15;
+        const graceAfter  = 30;
+
+        return tsMinutes >= (schedStart - graceBefore) && tsMinutes <= (schedEnd + graceAfter);
+    }
+
+    /**
+     * Extract minutes-since-midnight from a timestamp using multiple strategies
+     */
+    extractTimestampMinutes(timestamp) {
+        if (!timestamp) return null;
+        const tsStr = String(timestamp).trim();
+
+        // Strategy 1: already formatted 12-hour (e.g., "10:42am", "9:20 am")
+        const match12 = tsStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i);
+        if (match12) {
+            return this.toMinutes(parseInt(match12[1], 10), parseInt(match12[2], 10), match12[3].toLowerCase());
+        }
+
+        // Strategy 2: Date object or standard date string
+        let d = null;
+        if (timestamp instanceof Date) {
+            d = timestamp;
+        } else if (typeof timestamp === 'string' && (timestamp.includes('/') || timestamp.includes('-') || timestamp.includes(','))) {
+            d = new Date(timestamp);
+        }
+        if (d && !isNaN(d.getTime())) {
+            return d.getHours() * 60 + d.getMinutes();
+        }
+
+        // Strategy 3: 24-hour with seconds (e.g., "10:42:00", "14:30:00")
+        const match24Full = tsStr.match(/\b(\d{1,2}):(\d{2}):(\d{2})\b/);
+        if (match24Full) {
+            return parseInt(match24Full[1], 10) * 60 + parseInt(match24Full[2], 10);
+        }
+
+        // Strategy 4: 24-hour without seconds (e.g., "10:42", "14:30")
+        const match24Short = tsStr.match(/\b(\d{1,2}):(\d{2})\b/);
+        if (match24Short) {
+            const h = parseInt(match24Short[1], 10);
+            if (h >= 0 && h <= 23) return h * 60 + parseInt(match24Short[2], 10);
+        }
+
+        return null;
+    }
+
+    /**
+     * Convert 12-hour components → minutes since midnight
+     * Handles "am", "a.m.", "pm", "p.m.", "PM", etc.
+     */
+    toMinutes(h, m, ampm) {
+        let hour = parseInt(h, 10) % 12;
+        // If it starts with 'p' → PM (catches pm, p.m., PM, etc.)
+        if (ampm && ampm.charAt(0) === 'p') hour += 12;
+        return hour * 60 + parseInt(m, 10);
+    }
+
     formatRow(r, key, page) {
         if (key === 'fullName') return this.getFullName(r);
         if (key === 'address') return this.getAddress(r);
@@ -1077,6 +1268,20 @@ class DashboardApp {
     getAddress(r) {
         const parts = [r.barangay, r.municipality, r.province].filter(Boolean);
         return parts.join(', ');
+    }
+
+    getDuplicateNameKey(r) {
+        const name = this.getFullName(r);
+        if (!name || typeof name !== 'string') return '';
+        // Smart duplicate normalization: strip trailing N/A/NA placeholders,
+        // collapse whitespace, lowercase for reliable comparison
+        return name
+            .replace(/\s+N\/A\s*$/i, '')      // trailing " N/A"
+            .replace(/\s+NA\s*$/i, '')        // trailing " NA"
+            .replace(/\s+N\.A\.\s*$/i, '')   // trailing " N.A."
+            .replace(/\s+/g, ' ')              // collapse multiple spaces
+            .toLowerCase()
+            .trim();
     }
 
     renderSelect(value, options, field, id, onChange) {
@@ -1186,15 +1391,17 @@ class DashboardApp {
 
             const activeFilters = (this.columnFilters[page] && this.columnFilters[page][col.key]) || [];
             const hasActive = activeFilters.length > 0;
+            const activeClass = hasActive ? 'btn-primary' : 'btn-secondary';
+            const countBadge = hasActive ? `<span class="filter-count">${activeFilters.length}</span>` : '';
 
             html += `
                 <div class="column-filter-item">
-                    <button class="btn btn-sm ${hasActive ? 'btn-primary' : 'btn-secondary'}" onclick="app.toggleFilterDropdown(event, '${page}', '${col.key}')">
-                        ${col.label} ${hasActive ? `(${activeFilters.length})` : ''} <i class="fas fa-chevron-down"></i>
+                    <button class="btn btn-sm ${activeClass}" onclick="app.toggleFilterDropdown(event, '${page}', '${col.key}')">
+                        <i class="fas fa-filter"></i> ${col.label}${countBadge} <i class="fas fa-chevron-down"></i>
                     </button>
                     <div class="filter-dropdown" id="filter-dd-${page}-${col.key}">
                         <div class="filter-dropdown-header">
-                            <label><input type="checkbox" ${activeFilters.length === uniqueValues.length ? 'checked' : ''} onchange="app.toggleAllFilterValues('${page}', '${col.key}', this.checked, ${JSON.stringify(uniqueValues).replace(/"/g, '&quot;')})"> Select All</label>
+                            <label><input type="checkbox" ${activeFilters.length === uniqueValues.length ? 'checked' : ''} onchange="app.toggleAllFilterValues('${page}', '${col.key}', this.checked, ${JSON.stringify(uniqueValues).replace(/"/g, '&quot;')})"> Select All (${uniqueValues.length})</label>
                             <button class="btn-clear" onclick="app.clearColumnFilter('${page}', '${col.key}')">Clear</button>
                         </div>
                         <div class="filter-dropdown-body">
@@ -1507,8 +1714,6 @@ class DashboardApp {
         this.fetchAllDataOnInit();
     }
 
-
-
     openModal(id) {
         document.getElementById(id).classList.remove('hidden');
         document.body.style.overflow = 'hidden';
@@ -1575,7 +1780,7 @@ class DashboardApp {
         if (input && btn && input.value) btn.classList.add('visible');
     }
 
-        bindEvents() {
+    bindEvents() {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 ['settings-modal', 'shortcuts-modal', 'duplicate-modal'].forEach(id => this.closeModal(id));
