@@ -27,7 +27,7 @@ const MODULES = {
             { key: 'timestamp', label: 'Timestamp', sortable: true, format: 'customDate' },
             { key: 'fullName', label: 'Full Name', sortable: true, computed: true },
             { key: 'email', label: 'Email Address', sortable: true },
-            { key: 'degree', label: 'Degree Completed at RSU', sortable: true, filterable: true },
+            { key: 'degree', label: 'Degree Completed at RSU', sortable: true, filterable: true, dependsOn: 'campus' },
             { key: 'yearGraduated', label: 'Year Graduated', sortable: true, filterable: true },
             { key: 'campus', label: 'Campus', sortable: true, filterable: true }
         ]
@@ -46,7 +46,7 @@ const MODULES = {
             { key: 'email', label: 'E-mail Address', sortable: true },
             { key: 'address', label: 'Address', sortable: true, computed: true },
             { key: 'school', label: 'School Graduated', sortable: true, filterable: true },
-            { key: 'course', label: 'Course', sortable: true, filterable: true },
+            { key: 'course', label: 'Course', sortable: true, filterable: true, dependsOn: 'school' },
             { key: 'yearGraduated', label: 'Year Graduated', sortable: true, filterable: true }
         ]
     },
@@ -63,7 +63,7 @@ const MODULES = {
             { key: 'fullName', label: 'Full Name', sortable: true, computed: true },
             { key: 'email', label: 'Email Address', sortable: true },
             { key: 'college', label: 'College/Campus', sortable: true, filterable: true },
-            { key: 'degree', label: 'Degree & Specialization', sortable: true, filterable: true }
+            { key: 'degree', label: 'Degree & Specialization', sortable: true, filterable: true, dependsOn: 'college' }
         ]
     },
     'legs-participation': {
@@ -79,7 +79,7 @@ const MODULES = {
             { key: 'timestamp', label: 'Timestamp', sortable: true, format: 'customDate' },
             { key: 'fullName', label: 'Full Name', sortable: true, computed: true },
             { key: 'email', label: 'Email Address', sortable: true },
-            { key: 'degree', label: 'Degree & Specialization', sortable: true, filterable: true },
+            { key: 'degree', label: 'Degree & Specialization', sortable: true, filterable: true, dependsOn: 'campus' },
             { key: 'campus', label: 'Campus', sortable: true, filterable: true }
         ]
     },
@@ -96,7 +96,7 @@ const MODULES = {
             { key: 'fullName', label: 'Full Name', sortable: true, computed: false },
             { key: 'email', label: 'Email Address', sortable: true },
             { key: 'college', label: 'College/Campus', sortable: true, filterable: true },
-            { key: 'degree', label: 'Degree & Specialization', sortable: true, filterable: true }
+            { key: 'degree', label: 'Degree & Specialization', sortable: true, filterable: true, dependsOn: 'college' }
         ]
     }
 };
@@ -138,6 +138,12 @@ class DashboardApp {
         this.autoRefreshEnabled = false;
         this.previousData = {}; // For detecting new records
         this.duplicateNames = new Set(); // Track duplicate names
+        this.isSpeaking = false;
+        this.speechNames = [];
+        this.currentSpeakIndex = -1;
+        this.currentUtterance = null;
+        this.speechContext = null;
+        this.speakTimeout = null;
         this.init();
     }
 
@@ -475,6 +481,205 @@ class DashboardApp {
         this.openModal('duplicate-modal');
     }
 
+    // ============================================
+    // TEXT-TO-SPEECH — READ NAMES ALOUD
+    // ============================================
+    playBeep() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.25);
+            setTimeout(() => ctx.close(), 300);
+        } catch (e) {
+            console.warn('Beep failed:', e);
+        }
+    }
+
+    advancePageForSpeech() {
+        const mod = MODULES[this.currentPage];
+        const records = this.data[mod.dataKey] || [];
+        const filtered = this.filterRecords(records, this.currentPage);
+        const totalPages = Math.ceil(filtered.length / this.pagination.perPage);
+        if (this.pagination.page >= totalPages) {
+            this.playBeep();
+            this.stopSpeaking();
+            this.showToast('Finished reading all names', 'success');
+            return;
+        }
+        this.pagination.page++;
+        this.renderPage();
+        window.scrollTo(0, 0);
+        // Update speech context so isSpeechContextChanged() doesn't trigger
+        if (this.speechContext) this.speechContext.pageNum = this.pagination.page;
+        // Reload names for the new page
+        const sorted = this.sortRecords(filtered, this.currentPage);
+        const paginated = this.getPaginatedRecords(sorted);
+        this.speechNames = paginated.records.map(r => this.getFullName(r)).filter(n => n && n !== ',' && n !== ' , ');
+        this.currentSpeakIndex = 0;
+        if (this.speechNames.length === 0) {
+            // Empty page — skip to next
+            this.speakTimeout = setTimeout(() => this.advancePageForSpeech(), 500);
+            return;
+        }
+        // Brief pause before starting the new page (1.5s to let user breathe)
+        this.speakTimeout = setTimeout(() => this.speakNext(), 1500);
+    }
+
+    getFilipinoVoice() {
+        const voices = window.speechSynthesis.getVoices();
+        if (!voices || voices.length === 0) return null;
+        // Try exact Filipino/Tagalog voices first
+        const filVoice = voices.find(v => 
+            v.lang === 'fil-PH' || v.lang === 'tl-PH' || 
+            v.lang === 'fil' || v.lang === 'tl'
+        );
+        if (filVoice) return filVoice;
+        // Fallback: any voice that mentions Philippines or Tagalog
+        const partialMatch = voices.find(v => 
+            /philippines|tagalog|filipino|fil/i.test(v.lang + ' ' + v.name)
+        );
+        if (partialMatch) return partialMatch;
+        // Final fallback: any non-English voice that sounds natural (e.g., Google Filipino)
+        return voices.find(v => /filipino|tagalog/i.test(v.name)) || null;
+    }
+
+    async startSpeakingNames() {
+        if (!window.speechSynthesis) {
+            this.showToast('Text-to-speech not supported in this browser', 'error');
+            return;
+        }
+        this.stopSpeaking();
+        const mod = MODULES[this.currentPage];
+        const records = this.data[mod.dataKey] || [];
+        const filtered = this.filterRecords(records, this.currentPage);
+        const sorted = this.sortRecords(filtered, this.currentPage);
+        const paginated = this.getPaginatedRecords(sorted);
+        this.speechNames = paginated.records.map(r => this.getFullName(r)).filter(n => n && n !== ',' && n !== ' , ');
+        if (this.speechNames.length === 0) {
+            this.showToast('No names to read on this page', 'warning');
+            return;
+        }
+        // Preload voices so getFilipinoVoice() works reliably
+        if (window.speechSynthesis.getVoices().length === 0) {
+            await new Promise(resolve => {
+                const handler = () => { window.speechSynthesis.removeEventListener('voiceschanged', handler); resolve(); };
+                window.speechSynthesis.addEventListener('voiceschanged', handler);
+                // Fallback: if voices don't change within 1s, proceed anyway
+                setTimeout(resolve, 1000);
+            });
+        }
+        const chosenVoice = this.getFilipinoVoice();
+        if (chosenVoice) {
+            this.showToast(`Using Filipino voice: ${chosenVoice.name}`, 'info');
+        } else {
+            this.showToast('No Filipino voice found — using default accent', 'warning');
+        }
+        this.isSpeaking = true;
+        this.currentSpeakIndex = 0;
+        this.speechContext = {
+            page: this.currentPage,
+            filter: this.currentFilter,
+            search: this.currentSearch,
+            sortColumn: this.currentSort.column,
+            sortDir: this.currentSort.direction,
+            pageNum: this.pagination.page,
+            columnFiltersHash: JSON.stringify(this.columnFilters[this.currentPage] || {})
+        };
+        this.renderPage();
+        this.speakNext();
+    }
+
+    speakNext() {
+        if (!this.isSpeaking) return;
+        if (this.currentSpeakIndex >= this.speechNames.length) {
+            this.advancePageForSpeech();
+            return;
+        }
+        if (this.isSpeechContextChanged()) {
+            this.stopSpeaking();
+            this.showToast('Reading stopped — view changed', 'info');
+            return;
+        }
+        const name = this.speechNames[this.currentSpeakIndex];
+        this.updateSpeakingHighlight();
+        const utterance = new SpeechSynthesisUtterance(name);
+        utterance.rate = 0.85;
+        utterance.pitch = 1;
+        utterance.lang = 'fil-PH';
+        const filVoice = this.getFilipinoVoice();
+        if (filVoice) utterance.voice = filVoice;
+        utterance.onend = () => {
+            this.currentSpeakIndex++;
+            // 3-second pause between names
+            this.speakTimeout = setTimeout(() => this.speakNext(), 3000);
+        };
+        utterance.onerror = (e) => {
+            if (e.error !== 'canceled' && e.error !== 'interrupted') {
+                console.warn('Speech error:', e.error);
+            }
+            this.currentSpeakIndex++;
+            this.speakTimeout = setTimeout(() => this.speakNext(), 3000);
+        };
+        this.currentUtterance = utterance;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    updateSpeakingHighlight() {
+        document.querySelectorAll('.speaking-row').forEach(el => el.classList.remove('speaking-row'));
+        document.querySelectorAll('.speaking-card').forEach(el => el.classList.remove('speaking-card'));
+        const row = document.querySelector(`tr[data-speak-index="${this.currentSpeakIndex}"]`);
+        if (row) {
+            row.classList.add('speaking-row');
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        const card = document.querySelector(`.record-card[data-speak-index="${this.currentSpeakIndex}"]`);
+        if (card) {
+            card.classList.add('speaking-card');
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    stopSpeaking() {
+        if (!this.isSpeaking && !window.speechSynthesis) return;
+        this.isSpeaking = false;
+        this.speechNames = [];
+        this.currentSpeakIndex = -1;
+        this.speechContext = null;
+        this.currentUtterance = null;
+        if (this.speakTimeout) {
+            clearTimeout(this.speakTimeout);
+            this.speakTimeout = null;
+        }
+        if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+        }
+        document.querySelectorAll('.speaking-row').forEach(el => el.classList.remove('speaking-row'));
+        document.querySelectorAll('.speaking-card').forEach(el => el.classList.remove('speaking-card'));
+        this.renderPage();
+    }
+
+    isSpeechContextChanged() {
+        if (!this.speechContext) return true;
+        return this.speechContext.page !== this.currentPage ||
+               this.speechContext.filter !== this.currentFilter ||
+               this.speechContext.search !== this.currentSearch ||
+               this.speechContext.sortColumn !== this.currentSort.column ||
+               this.speechContext.sortDir !== this.currentSort.direction ||
+               this.speechContext.pageNum !== this.pagination.page ||
+               this.speechContext.columnFiltersHash !== JSON.stringify(this.columnFilters[this.currentPage] || {});
+    }
+
     exportDuplicates() {
         const mod = MODULES[this.currentPage];
         const records = this.data[mod.dataKey] || [];
@@ -572,6 +777,7 @@ class DashboardApp {
     }
 
     async refreshData() {
+        this.stopSpeaking();
         const pages = Object.keys(MODULES).filter(p => this.hasEndpoint(p));
         if (pages.length === 0) {
             this.showToast('No data sources configured', 'error');
@@ -614,6 +820,7 @@ class DashboardApp {
     // NAVIGATION & RENDERING
     // ============================================
     navigateTo(page) {
+        this.stopSpeaking();
         this.currentPage = page;
         this.currentFilter = 'all';
         // Keep currentSearch persistent across modules
@@ -773,16 +980,18 @@ class DashboardApp {
         const visibleColumns = mod.columns.filter(c => this.isColumnVisible(page, c.key));
 
         let rowsHtml = '';
-        paginated.records.forEach(r => {
+        paginated.records.forEach((r, index) => {
             const isDuplicate = this.settings.showDuplicates && this.duplicateNames.has(this.getDuplicateNameKey(r));
             const isNew = r._isNew;
             const isMatched = this.isScheduleMatch(r, page);
+            const isSpeaking = this.isSpeaking && this.currentSpeakIndex === index;
             const rowClass = [];
             if (isDuplicate) rowClass.push('duplicate-row');
             if (isNew) rowClass.push('new-record');
             if (isMatched) rowClass.push('schedule-matched');
+            if (isSpeaking) rowClass.push('speaking-row');
 
-            rowsHtml += `<tr class="${rowClass.join(' ')}">`;
+            rowsHtml += `<tr class="${rowClass.join(' ')}" data-speak-index="${index}">`;
             visibleColumns.forEach(col => {
                 rowsHtml += `<td>${this.renderCell(r, col, page, isMatched)}</td>`;
             });
@@ -790,9 +999,9 @@ class DashboardApp {
         });
 
         let cardsHtml = '';
-        paginated.records.forEach(r => {
+        paginated.records.forEach((r, index) => {
             const isMatched = this.isScheduleMatch(r, page);
-            cardsHtml += this.renderRecordCard(r, page, visibleColumns, isMatched);
+            cardsHtml += this.renderRecordCard(r, page, visibleColumns, isMatched, index);
         });
 
         const freshness = this.renderFreshnessBadge(page);
@@ -816,6 +1025,9 @@ class DashboardApp {
                     <button class="density-btn ${this.settings.tableDensity === 'normal' ? 'active' : ''}" onclick="app.setTableDensity('normal')" title="Normal"><i class="fas fa-grip-lines"></i></button>
                     <button class="density-btn ${this.settings.tableDensity === 'comfortable' ? 'active' : ''}" onclick="app.setTableDensity('comfortable')" title="Comfortable"><i class="fas fa-expand"></i></button>
                 </div>
+                <button class="btn btn-secondary btn-sm fullscreen-btn" onclick="app.toggleFullscreenTable()" title="Fullscreen Table (Esc to exit)">
+                    <i class="fas fa-expand" id="fullscreen-icon"></i>
+                </button>
                 <div class="column-toggle">
                     <button class="btn btn-secondary btn-sm" onclick="app.toggleColumnMenu(event)" title="Columns"><i class="fas fa-columns"></i></button>
                     <div class="column-toggle-menu" id="column-menu-${page}">
@@ -960,15 +1172,25 @@ class DashboardApp {
         });
 
         html += `<button class="page-btn" ${current === totalPages ? 'disabled' : ''} onclick="app.changePage(${current + 1})"><i class="fas fa-chevron-right"></i></button>`;
+
+        // TTS Speak Button
+        const speakBtnClass = this.isSpeaking ? 'speak-btn speaking' : 'speak-btn';
+        const speakIcon = this.isSpeaking ? 'fa-stop' : 'fa-volume-high';
+        const speakTitle = this.isSpeaking ? 'Stop reading names' : 'Read names aloud (auto-paging)';
+        const speakAction = this.isSpeaking ? 'app.stopSpeaking()' : 'app.startSpeakingNames()';
+        html += `<div class="speak-divider"></div><button class="page-btn ${speakBtnClass}" onclick="${speakAction}" title="${speakTitle}"><i class="fas ${speakIcon}"></i></button>`;
+
         html += `</div></div>`;
         return html;
     }
 
-    renderRecordCard(r, page, visibleColumns, isMatched) {
+    renderRecordCard(r, page, visibleColumns, isMatched, index) {
         const isDuplicate = this.settings.showDuplicates && this.duplicateNames.has(this.getDuplicateNameKey(r));
+        const isSpeaking = this.isSpeaking && this.currentSpeakIndex === index;
         let cardClass = '';
         if (isDuplicate) cardClass += ' duplicate-card';
         if (isMatched) cardClass += ' schedule-matched';
+        if (isSpeaking) cardClass += ' speaking-card';
 
         let rows = '';
         visibleColumns.forEach(col => {
@@ -990,7 +1212,7 @@ class DashboardApp {
 
             rows += `<div class="record-card-row"><span class="record-card-label">${col.label}</span><span class="record-card-value">${value}</span></div>`;
         });
-        return `<div class="record-card${cardClass}"><div class="record-card-body">${rows}</div></div>`;
+        return `<div class="record-card${cardClass}" data-speak-index="${index}"><div class="record-card-body">${rows}</div></div>`;
     }
 
     renderCell(r, col, page, isMatched) {
@@ -1055,6 +1277,106 @@ class DashboardApp {
         }
 
         this.renderPage();
+    }
+
+    // ============================================
+    // FULLSCREEN TABLE MODE
+    // ============================================
+    toggleFullscreenTable() {
+        const doc = document;
+        const icon = document.getElementById('fullscreen-icon');
+        const btn = icon ? icon.closest('button') : null;
+
+        // Check if we're currently in native fullscreen
+        const isNativeFullscreen = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+
+        if (!isNativeFullscreen) {
+            // Enter native fullscreen on the app container
+            const app = document.querySelector('.app-container');
+            if (app.requestFullscreen) {
+                app.requestFullscreen().catch(err => {
+                    console.warn('Fullscreen denied:', err);
+                    // Fallback to CSS-only mode
+                    this.enterCssFullscreen();
+                });
+            } else if (app.webkitRequestFullscreen) {
+                app.webkitRequestFullscreen();
+            } else if (app.mozRequestFullScreen) {
+                app.mozRequestFullScreen();
+            } else if (app.msRequestFullscreen) {
+                app.msRequestFullscreen();
+            } else {
+                // Browser doesn't support Fullscreen API — fallback to CSS
+                this.enterCssFullscreen();
+            }
+        } else {
+            // Exit native fullscreen
+            if (doc.exitFullscreen) {
+                doc.exitFullscreen();
+            } else if (doc.webkitExitFullscreen) {
+                doc.webkitExitFullscreen();
+            } else if (doc.mozCancelFullScreen) {
+                doc.mozCancelFullScreen();
+            } else if (doc.msExitFullscreen) {
+                doc.msExitFullscreen();
+            }
+        }
+    }
+
+    enterCssFullscreen() {
+        const app = document.querySelector('.app-container');
+        app.classList.add('table-fullscreen');
+        const icon = document.getElementById('fullscreen-icon');
+        const btn = icon ? icon.closest('button') : null;
+        if (icon) icon.className = 'fas fa-compress';
+        if (btn) btn.title = 'Exit Fullscreen (Esc)';
+        document.body.style.overflow = 'hidden';
+        this.showToast('Fullscreen mode active', 'info');
+    }
+
+    exitCssFullscreen() {
+        const app = document.querySelector('.app-container');
+        app.classList.remove('table-fullscreen');
+        const icon = document.getElementById('fullscreen-icon');
+        const btn = icon ? icon.closest('button') : null;
+        if (icon) icon.className = 'fas fa-expand';
+        if (btn) btn.title = 'Fullscreen Table (Esc to exit)';
+        document.body.style.overflow = '';
+    }
+
+    handleFullscreenChange() {
+        const doc = document;
+        const isFullscreen = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+
+        if (isFullscreen) {
+            // Native fullscreen entered — also apply our CSS enhancements
+            const app = document.querySelector('.app-container');
+            app.classList.add('table-fullscreen');
+            const icon = document.getElementById('fullscreen-icon');
+            const btn = icon ? icon.closest('button') : null;
+            if (icon) icon.className = 'fas fa-compress';
+            if (btn) btn.title = 'Exit Fullscreen (Esc)';
+            document.body.style.overflow = 'hidden';
+        } else {
+            // Native fullscreen exited — remove CSS enhancements
+            this.exitCssFullscreen();
+        }
+    }
+
+    exitFullscreenTable() {
+        const doc = document;
+        const isNativeFullscreen = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+
+        if (isNativeFullscreen) {
+            // Exit native fullscreen
+            if (doc.exitFullscreen) doc.exitFullscreen();
+            else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
+            else if (doc.mozCancelFullScreen) doc.mozCancelFullScreen();
+            else if (doc.msExitFullscreen) doc.msExitFullscreen();
+        }
+
+        // Always remove CSS class
+        this.exitCssFullscreen();
     }
 
     // ============================================
@@ -1375,6 +1697,94 @@ class DashboardApp {
     }
 
     // ============================================
+    // CASCADING (DEPENDENT) FILTER HELPERS
+    // ============================================
+
+    /**
+     * Returns records filtered by all active constraints EXCEPT the given column.
+     * Used to populate contextual dropdown options for dependent filters.
+     */
+    getContextualRecordsForFilter(page, allRecords, currentColKey) {
+        let filtered = [...allRecords];
+        const mod = MODULES[page];
+
+        // Apply status/tab filter
+        if (this.currentFilter !== 'all') {
+            if (page === 'legs-participation' && this.currentFilter === 'green checks') {
+                filtered = filtered.filter(r => this.isScheduleMatch(r, page));
+            } else {
+                filtered = filtered.filter(r => (r.status || '').toLowerCase() === this.currentFilter);
+            }
+        }
+
+        // Apply other column filters (excluding current)
+        const pageFilters = this.columnFilters[page];
+        if (pageFilters) {
+            Object.keys(pageFilters).forEach(colKey => {
+                if (colKey === currentColKey) return;
+                const allowedValues = pageFilters[colKey];
+                if (allowedValues && allowedValues.length > 0) {
+                    const col = mod.columns.find(c => c.key === colKey);
+                    filtered = filtered.filter(r => {
+                        const val = col.computed ? this.formatRow(r, colKey, page) : r[colKey];
+                        return allowedValues.includes(String(val || '').trim());
+                    });
+                }
+            });
+        }
+
+        // Apply global search
+        if (this.currentSearch) {
+            const search = this.currentSearch.toLowerCase();
+            filtered = filtered.filter(r => {
+                return mod.columns.some(col => {
+                    const val = col.computed ? this.formatRow(r, col.key, page) : r[col.key];
+                    return String(val).toLowerCase().includes(search);
+                });
+            });
+        }
+
+        return filtered;
+    }
+
+    /**
+     * When a parent filter changes, remove dependent selections that no longer exist.
+     */
+    clearInvalidDependentFilters(page, changedColKey) {
+        const mod = MODULES[page];
+        const pageFilters = this.columnFilters[page];
+        if (!pageFilters) return;
+
+        // Find columns that depend on the changed column
+        const dependentCols = mod.columns.filter(c => c.dependsOn === changedColKey);
+        if (!dependentCols.length) return;
+
+        const allRecords = this.data[mod.dataKey] || [];
+
+        dependentCols.forEach(depCol => {
+            const depKey = depCol.key;
+            const depFilters = pageFilters[depKey];
+            if (!depFilters || depFilters.length === 0) return;
+
+            // Valid values for dependent column given current parent + other filters
+            const contextualRecords = this.getContextualRecordsForFilter(page, allRecords, depKey);
+            const validValues = [...new Set(contextualRecords.map(r => {
+                const val = depCol.computed ? this.formatRow(r, depKey, page) : r[depKey];
+                return String(val || '').trim();
+            }).filter(v => v))];
+
+            const validSelections = depFilters.filter(v => validValues.includes(v));
+            if (validSelections.length === 0) {
+                delete pageFilters[depKey];
+            } else if (validSelections.length !== depFilters.length) {
+                pageFilters[depKey] = validSelections;
+            }
+        });
+
+        this.saveColumnFilters();
+    }
+
+    // ============================================
     // COLUMN FILTER DROPDOWNS
     // ============================================
     renderColumnFilterDropdowns(page, allRecords) {
@@ -1384,7 +1794,13 @@ class DashboardApp {
 
         let html = `<div class="column-filters-bar">`;
         filterableCols.forEach(col => {
-            const uniqueValues = [...new Set(allRecords.map(r => {
+            // ⬇️ CONTEXTUAL OPTIONS: dependent columns only show values that exist
+            // within the currently filtered dataset (respecting parent filters)
+            const sourceRecords = col.dependsOn
+                ? this.getContextualRecordsForFilter(page, allRecords, col.key)
+                : allRecords;
+
+            const uniqueValues = [...new Set(sourceRecords.map(r => {
                 const val = col.computed ? this.formatRow(r, col.key, page) : r[col.key];
                 return String(val || '').trim();
             }).filter(v => v))].sort();
@@ -1430,6 +1846,7 @@ class DashboardApp {
     }
 
     toggleFilterValue(page, colKey, value, checked) {
+        this.stopSpeaking();
         if (!this.columnFilters[page]) this.columnFilters[page] = {};
         if (!this.columnFilters[page][colKey]) this.columnFilters[page][colKey] = [];
         const arr = this.columnFilters[page][colKey];
@@ -1438,11 +1855,16 @@ class DashboardApp {
         if (!checked && idx > -1) arr.splice(idx, 1);
         if (arr.length === 0) delete this.columnFilters[page][colKey];
         this.saveColumnFilters();
+
+        // ⬇️ NEW: clear dependent filters that are no longer valid
+        this.clearInvalidDependentFilters(page, colKey);
+
         this.pagination.page = 1;
         this.renderPage();
     }
 
     toggleAllFilterValues(page, colKey, checked, values) {
+        this.stopSpeaking();
         if (!this.columnFilters[page]) this.columnFilters[page] = {};
         if (checked) {
             this.columnFilters[page][colKey] = [...values];
@@ -1450,13 +1872,22 @@ class DashboardApp {
             delete this.columnFilters[page][colKey];
         }
         this.saveColumnFilters();
+
+        // ⬇️ NEW: clear dependent filters that are no longer valid
+        this.clearInvalidDependentFilters(page, colKey);
+
         this.pagination.page = 1;
         this.renderPage();
     }
 
     clearColumnFilter(page, colKey) {
+        this.stopSpeaking();
         if (this.columnFilters[page]) delete this.columnFilters[page][colKey];
         this.saveColumnFilters();
+
+        // ⬇️ NEW: clearing a parent filter may also change dependent options
+        this.clearInvalidDependentFilters(page, colKey);
+
         this.pagination.page = 1;
         this.renderPage();
     }
@@ -1604,12 +2035,14 @@ class DashboardApp {
     // UI ACTIONS
     // ============================================
     setFilter(filter) {
+        this.stopSpeaking();
         this.currentFilter = filter;
         this.pagination.page = 1;
         this.renderPage();
     }
 
     sortBy(column) {
+        this.stopSpeaking();
         if (this.currentSort.column === column) {
             this.currentSort.direction = this.currentSort.direction === 'asc' ? 'desc' : 'asc';
         } else {
@@ -1620,6 +2053,7 @@ class DashboardApp {
     }
 
     changePage(page) {
+        this.stopSpeaking();
         this.pagination.page = page;
         this.renderPage();
         window.scrollTo(0, 0);
@@ -1630,6 +2064,7 @@ class DashboardApp {
         if (clearBtn) clearBtn.classList.toggle('visible', !!value);
         clearTimeout(this.searchDebounce);
         this.searchDebounce = setTimeout(() => {
+            this.stopSpeaking();
             this.currentSearch = (value || '').trim();
             this.pagination.page = 1;
             this.renderPage();
@@ -1637,6 +2072,7 @@ class DashboardApp {
     }
 
     triggerSearch() {
+        this.stopSpeaking();
         const input = document.getElementById('global-search');
         if (!input) return;
         const value = input.value.trim();
@@ -1791,6 +2227,7 @@ class DashboardApp {
                 document.getElementById('sidebar').classList.remove('open');
                 document.getElementById('mobile-overlay').classList.add('hidden');
                 document.querySelectorAll('.column-toggle-menu, .filter-dropdown').forEach(m => m.classList.remove('open'));
+                this.exitFullscreenTable();
             }
             if (e.key === '?' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
                 e.preventDefault();
@@ -1841,6 +2278,12 @@ class DashboardApp {
                 }
             });
         }
+
+        // Listen for native fullscreen change events (F11, Esc, button click)
+        document.addEventListener('fullscreenchange', () => this.handleFullscreenChange());
+        document.addEventListener('webkitfullscreenchange', () => this.handleFullscreenChange());
+        document.addEventListener('mozfullscreenchange', () => this.handleFullscreenChange());
+        document.addEventListener('MSFullscreenChange', () => this.handleFullscreenChange());
     }
 }
 
