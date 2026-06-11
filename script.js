@@ -8,30 +8,43 @@ const CONFIG = {
     STALE_THRESHOLD_MS: 300000,
     AUTO_REFRESH_INTERVAL_MS: 60000,
     LIVE_INDICATOR_DURATION_MS: 2000,
-    // Paste your Config Web App URL here to auto-load for all users
     DEFAULT_CONFIG_URL: 'https://script.google.com/macros/s/AKfycbzmuLzINxTAr11Gp8xLVs1hEr_vu5hU4I_oIFT9foEFhv7y5QBKgs70I04VZywz8wjJ/exec'
 };
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTH_SHORT_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const MODULES = {
-    'alumni-info': {
-        title: 'Alumni Info Sheet',
-        subtitle: 'Alumni registration form responses',
-        icon: 'fa-user',
-        dataKey: 'alumniInfo',
-        endpointKey: 'alumni-info',
-        filters: ['All'],
-        defaultSort: { column: 'fullName', direction: 'asc' },
-        columns: [
-            { key: 'timestamp', label: 'Timestamp', sortable: true, format: 'customDate' },
-            { key: 'fullName', label: 'Full Name', sortable: true, computed: true },
-            { key: 'email', label: 'Email Address', sortable: true },
-            { key: 'degree', label: 'Degree Completed at RSU', sortable: true, filterable: true, dependsOn: 'campus' },
-            { key: 'yearGraduated', label: 'Year Graduated', sortable: true, filterable: true },
-            { key: 'campus', label: 'Campus', sortable: true, filterable: true }
-        ]
-    },
+'alumni-info': {
+    title: 'Alumni Info Sheet',
+    subtitle: 'Alumni registration form responses',
+    icon: 'fa-user',
+    dataKey: 'alumniInfo',
+    endpointKey: 'alumni-info',
+    filters: ['All'],
+    defaultSort: { column: 'fullName', direction: 'asc' },
+    columns: [
+        { key: 'timestamp',       label: 'Timestamp',              sortable: true, format: 'customDate', filterable: true, filterType: 'month' },
+        { key: 'fullName',        label: 'Full Name',              sortable: true, computed: true },
+        { key: 'email',           label: 'Email Address',          sortable: true, uppercase: false },
+        { key: 'sexAtBirth',      label: 'Sex Assigned at Birth',  sortable: true, filterable: true },
+        { key: 'genderIdentity',  label: 'Gender Identity',        sortable: true, filterable: true },
+        { key: 'isPwd',           label: 'PWD Status',             sortable: true, filterable: true },
+        { key: 'pwdType',         label: 'PWD Type',               sortable: true, filterable: true },
+        { key: 'isIp',            label: 'IP Member',              sortable: true, filterable: true },
+        { key: 'ipAffiliation',   label: 'IP Affiliation',         sortable: true, filterable: true },
+        { key: 'civilStatus',     label: 'Civil Status',           sortable: true, filterable: true },
+        { key: 'citizenship',     label: 'Citizenship',            sortable: true, filterable: true },
+        { key: 'birthdate',       label: 'Birthdate',              sortable: true, format: 'birthdateWithAge', filterable: true, filterType: 'month' },
+        { key: 'telephone',       label: 'Telephone / Mobile',     sortable: true },
+        { key: 'facebook',        label: 'Facebook Account',       sortable: true },
+        { key: 'homeAddress',     label: 'Home Address',           sortable: true, validateAddress: true },
+        { key: 'firstGenCollege', label: 'First Gen College',      sortable: true, filterable: true },
+        { key: 'degree',          label: 'Degree Completed at RSU', sortable: true, filterable: true },
+        { key: 'yearGraduated',   label: 'Year Graduated',          sortable: true, filterable: true },
+        { key: 'campus',          label: 'Campus',                  sortable: true, filterable: true }
+    ]
+},
     'nsrp-registration': {
         title: 'NSRP Registration',
         subtitle: 'NSRP form responses',
@@ -43,7 +56,7 @@ const MODULES = {
         columns: [
             { key: 'timestamp', label: 'Timestamp', sortable: true, format: 'customDate' },
             { key: 'fullName', label: 'Full Name', sortable: true, computed: true },
-            { key: 'email', label: 'E-mail Address', sortable: true },
+            { key: 'email', label: 'E-mail Address', sortable: true, uppercase: false },
             { key: 'address', label: 'Address', sortable: true, computed: true },
             { key: 'school', label: 'School Graduated', sortable: true, filterable: true },
             { key: 'course', label: 'Course', sortable: true, filterable: true, dependsOn: 'school' },
@@ -61,7 +74,7 @@ const MODULES = {
         columns: [
             { key: 'timestamp', label: 'Timestamp', sortable: true, format: 'customDate' },
             { key: 'fullName', label: 'Full Name', sortable: true, computed: true },
-            { key: 'email', label: 'Email Address', sortable: true },
+            { key: 'email', label: 'Email Address', sortable: true, uppercase: false },
             { key: 'college', label: 'College/Campus', sortable: true, filterable: true },
             { key: 'degree', label: 'Degree & Specialization', sortable: true, filterable: true, dependsOn: 'college' }
         ]
@@ -78,7 +91,7 @@ const MODULES = {
             { key: 'schedule', label: 'Webinar Schedule', sortable: true, filterable: true },
             { key: 'timestamp', label: 'Timestamp', sortable: true, format: 'customDate' },
             { key: 'fullName', label: 'Full Name', sortable: true, computed: true },
-            { key: 'email', label: 'Email Address', sortable: true },
+            { key: 'email', label: 'Email Address', sortable: true, uppercase: false },
             { key: 'degree', label: 'Degree & Specialization', sortable: true, filterable: true, dependsOn: 'campus' },
             { key: 'campus', label: 'Campus', sortable: true, filterable: true }
         ]
@@ -94,7 +107,7 @@ const MODULES = {
         columns: [
             { key: 'timestamp', label: 'Timestamp', sortable: true, format: 'customDate' },
             { key: 'fullName', label: 'Full Name', sortable: true, computed: false },
-            { key: 'email', label: 'Email Address', sortable: true },
+            { key: 'email', label: 'Email Address', sortable: true, uppercase: false },
             { key: 'college', label: 'College/Campus', sortable: true, filterable: true },
             { key: 'degree', label: 'Degree & Specialization', sortable: true, filterable: true, dependsOn: 'college' }
         ]
@@ -127,7 +140,7 @@ class DashboardApp {
             darkMode: false,
             rowsPerPage: 20,
             visibleColumns: {},
-            tableDensity: 'normal', // normal, compact, comfortable
+            tableDensity: 'normal',
             showDuplicates: false
         };
         this.endpoints = {};
@@ -136,8 +149,8 @@ class DashboardApp {
         this.searchDebounce = null;
         this.autoRefreshInterval = null;
         this.autoRefreshEnabled = false;
-        this.previousData = {}; // For detecting new records
-        this.duplicateNames = new Set(); // Track duplicate names
+        this.previousData = {};
+        this.duplicateNames = new Set();
         this.isSpeaking = false;
         this.speechNames = [];
         this.currentSpeakIndex = -1;
@@ -155,7 +168,6 @@ class DashboardApp {
         this.bindEvents();
         this.initSearchClear();
         this.checkLogin();
-        // Try loading global endpoints after login
         setTimeout(() => this.loadEndpointsGlobal(), 500);
     }
 
@@ -174,7 +186,6 @@ class DashboardApp {
         const pass = document.getElementById('login-pass').value;
         const errorEl = document.getElementById('login-error');
         const card = document.querySelector('.login-card');
-
         if (user === 'AdminTon' && pass === '4CaresCheqList') {
             errorEl.textContent = '';
             sessionStorage.setItem('dashboard_session', 'authenticated');
@@ -187,7 +198,7 @@ class DashboardApp {
         } else {
             errorEl.textContent = 'Invalid username or password';
             card.style.animation = 'none';
-            card.offsetHeight; // trigger reflow
+            card.offsetHeight;
             card.style.animation = 'shake 0.4s ease';
         }
     }
@@ -240,7 +251,6 @@ class DashboardApp {
     }
 
     async loadEndpointsGlobal() {
-        // Try localStorage first, then hardcoded default
         let configUrl = localStorage.getItem('dashboard_config_endpoint');
         if (!configUrl && CONFIG.DEFAULT_CONFIG_URL) {
             configUrl = CONFIG.DEFAULT_CONFIG_URL;
@@ -271,7 +281,6 @@ class DashboardApp {
         }
         if (!configUrl) return;
         try {
-            // Build query string with all endpoints (GET = no CORS preflight)
             const params = new URLSearchParams();
             params.set('action', 'saveEndpoints');
             Object.entries(this.endpoints).forEach(([key, val]) => {
@@ -309,15 +318,11 @@ class DashboardApp {
         return !!this.endpoints[MODULES[page].endpointKey];
     }
 
-    // ============================================
-    // LIVE DATA UPDATES
-    // ============================================
     toggleAutoRefresh() {
         this.autoRefreshEnabled = !this.autoRefreshEnabled;
         const btn = document.getElementById('auto-refresh-btn');
         const icon = document.getElementById('auto-refresh-icon');
         const indicator = document.getElementById('live-indicator');
-
         if (this.autoRefreshEnabled) {
             btn.classList.add('active');
             btn.querySelector('span').textContent = 'Auto: On';
@@ -350,19 +355,10 @@ class DashboardApp {
     async fetchAllDataSilent() {
         const pages = Object.keys(MODULES).filter(p => this.hasEndpoint(p));
         if (pages.length === 0) return;
-
-        // Store previous data for comparison
         this.previousData = JSON.parse(JSON.stringify(this.data));
-
         await Promise.all(pages.map(p => this.fetchModuleData(p, false, true)));
-
-        // Check for new records
         this.detectNewRecords();
-
-        // Update dashboard counts
         this.updateDashboardCounts();
-
-        // Re-render if on current page
         this.renderPage();
     }
 
@@ -370,12 +366,9 @@ class DashboardApp {
         const mod = MODULES[this.currentPage];
         const currentRecords = this.data[mod.dataKey] || [];
         const previousRecords = this.previousData[mod.dataKey] || [];
-
         if (currentRecords.length > previousRecords.length) {
             const newCount = currentRecords.length - previousRecords.length;
             this.showToast(`${newCount} new record(s) detected`, 'success');
-
-            // Mark new records
             const previousIds = new Set(previousRecords.map(r => r.id || JSON.stringify(r)));
             currentRecords.forEach(r => {
                 const key = r.id || JSON.stringify(r);
@@ -383,20 +376,14 @@ class DashboardApp {
                     r._isNew = true;
                 }
             });
-
-            // Clear new flag after animation
             setTimeout(() => {
                 currentRecords.forEach(r => delete r._isNew);
             }, 3000);
         }
     }
 
-    // ============================================
-    // DUPLICATE DETECTION
-    // ============================================
     findDuplicates(records) {
         const nameMap = new Map();
-
         records.forEach(r => {
             const name = this.getDuplicateNameKey(r);
             if (name && name !== ',' && name !== ' , ') {
@@ -406,14 +393,12 @@ class DashboardApp {
                 nameMap.get(name).push(r);
             }
         });
-
         const duplicates = new Map();
         nameMap.forEach((records, name) => {
             if (records.length > 1) {
                 duplicates.set(name, records);
             }
         });
-
         return duplicates;
     }
 
@@ -429,10 +414,8 @@ class DashboardApp {
     toggleDuplicateHighlight() {
         this.settings.showDuplicates = !this.settings.showDuplicates;
         this.saveSettings();
-
         const icon = document.getElementById('duplicate-icon');
         const btn = icon.closest('.glass-btn');
-
         if (this.settings.showDuplicates) {
             btn.classList.add('active');
             this.showToast('Duplicate highlighting enabled', 'info');
@@ -440,7 +423,6 @@ class DashboardApp {
             btn.classList.remove('active');
             this.showToast('Duplicate highlighting disabled', 'info');
         }
-
         this.renderPage();
     }
 
@@ -448,15 +430,12 @@ class DashboardApp {
         const mod = MODULES[this.currentPage];
         const records = this.data[mod.dataKey] || [];
         const duplicates = this.findDuplicates(records);
-
         if (duplicates.size === 0) {
             this.showToast('No duplicates found', 'info');
             return;
         }
-
         const body = document.getElementById('duplicate-modal-body');
         let html = '<div class="duplicate-list">';
-
         duplicates.forEach((recs, name) => {
             html += `
                 <div class="duplicate-group">
@@ -475,15 +454,11 @@ class DashboardApp {
                 </div>
             `;
         });
-
         html += '</div>';
         body.innerHTML = html;
         this.openModal('duplicate-modal');
     }
 
-    // ============================================
-    // TEXT-TO-SPEECH — READ NAMES ALOUD
-    // ============================================
     playBeep() {
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -520,37 +495,30 @@ class DashboardApp {
         this.pagination.page++;
         this.renderPage();
         window.scrollTo(0, 0);
-        // Update speech context so isSpeechContextChanged() doesn't trigger
         if (this.speechContext) this.speechContext.pageNum = this.pagination.page;
-        // Reload names for the new page
         const sorted = this.sortRecords(filtered, this.currentPage);
         const paginated = this.getPaginatedRecords(sorted);
         this.speechNames = paginated.records.map(r => this.getFullName(r)).filter(n => n && n !== ',' && n !== ' , ');
         this.currentSpeakIndex = 0;
         if (this.speechNames.length === 0) {
-            // Empty page — skip to next
             this.speakTimeout = setTimeout(() => this.advancePageForSpeech(), 500);
             return;
         }
-        // Brief pause before starting the new page (1.5s to let user breathe)
         this.speakTimeout = setTimeout(() => this.speakNext(), 1500);
     }
 
     getFilipinoVoice() {
         const voices = window.speechSynthesis.getVoices();
         if (!voices || voices.length === 0) return null;
-        // Try exact Filipino/Tagalog voices first
         const filVoice = voices.find(v => 
             v.lang === 'fil-PH' || v.lang === 'tl-PH' || 
             v.lang === 'fil' || v.lang === 'tl'
         );
         if (filVoice) return filVoice;
-        // Fallback: any voice that mentions Philippines or Tagalog
         const partialMatch = voices.find(v => 
             /philippines|tagalog|filipino|fil/i.test(v.lang + ' ' + v.name)
         );
         if (partialMatch) return partialMatch;
-        // Final fallback: any non-English voice that sounds natural (e.g., Google Filipino)
         return voices.find(v => /filipino|tagalog/i.test(v.name)) || null;
     }
 
@@ -570,12 +538,10 @@ class DashboardApp {
             this.showToast('No names to read on this page', 'warning');
             return;
         }
-        // Preload voices so getFilipinoVoice() works reliably
         if (window.speechSynthesis.getVoices().length === 0) {
             await new Promise(resolve => {
                 const handler = () => { window.speechSynthesis.removeEventListener('voiceschanged', handler); resolve(); };
                 window.speechSynthesis.addEventListener('voiceschanged', handler);
-                // Fallback: if voices don't change within 1s, proceed anyway
                 setTimeout(resolve, 1000);
             });
         }
@@ -621,7 +587,6 @@ class DashboardApp {
         if (filVoice) utterance.voice = filVoice;
         utterance.onend = () => {
             this.currentSpeakIndex++;
-            // 3-second pause between names
             this.speakTimeout = setTimeout(() => this.speakNext(), 3000);
         };
         utterance.onerror = (e) => {
@@ -684,9 +649,7 @@ class DashboardApp {
         const mod = MODULES[this.currentPage];
         const records = this.data[mod.dataKey] || [];
         const duplicates = this.findDuplicates(records);
-
         if (duplicates.size === 0) return;
-
         const exportData = [];
         duplicates.forEach((recs, name) => {
             recs.forEach(r => {
@@ -698,26 +661,20 @@ class DashboardApp {
                 });
             });
         });
-
         const headers = Object.keys(exportData[0]);
         const csv = [headers.join(',')];
         exportData.forEach(row => {
             csv.push(headers.map(h => `"${String(row[h] || '').replace(/"/g, '""')}"`).join(','));
         });
-
         const blob = new Blob(['\uFEFF' + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = `duplicates-${this.currentPage}-${new Date().toISOString().slice(0,10)}.csv`;
         link.click();
         URL.revokeObjectURL(link.href);
-
         this.showToast('Duplicates exported successfully');
     }
 
-    // ============================================
-    // DATA FETCHING
-    // ============================================
     async fetchAllDataOnInit() {
         const pages = Object.keys(MODULES).filter(p => this.hasEndpoint(p));
         if (pages.length === 0) return;
@@ -737,12 +694,10 @@ class DashboardApp {
         }
         this.loadingModules.add(page);
         if (!silent) this.renderPage();
-
         try {
             const response = await fetch(url + '?action=getData&sheet=' + encodeURIComponent(mod.dataKey));
             const result = await response.json();
             if (result.success) {
-                // Handle empty/new sheets gracefully
                 this.data[mod.dataKey] = Array.isArray(result.data) ? result.data : [];
                 this.lastFetch[page] = Date.now();
                 this.saveLastFetch();
@@ -755,7 +710,6 @@ class DashboardApp {
                     }
                 }
             } else {
-                // Backend might not support sheet param yet, try legacy endpoint
                 const legacyRes = await fetch(url + '?action=getData');
                 const legacyResult = await legacyRes.json();
                 if (legacyResult.success && Array.isArray(legacyResult.data)) {
@@ -791,9 +745,6 @@ class DashboardApp {
         this.renderPage();
     }
 
-    // ============================================
-    // DASHBOARD COUNTS
-    // ============================================
     updateDashboardCounts() {
         const counts = {
             'alumni-info': this.data.alumniInfo.length,
@@ -802,39 +753,29 @@ class DashboardApp {
             'legs-participation': this.data.legsParticipation.length,
             'legs-evaluation': this.data.legsEvaluation.length
         };
-
-        // Update sidebar mini cards
         document.getElementById('dash-alumni-count').textContent = counts['alumni-info'];
         document.getElementById('dash-nsrp-count').textContent = counts['nsrp-registration'];
         document.getElementById('dash-jops-count').textContent = counts['jops-evaluation'];
         document.getElementById('dash-legs-count').textContent = counts['legs-participation'] + counts['legs-evaluation'];
-
-        // Update nav badges
         Object.keys(MODULES).forEach(page => {
             const badge = document.getElementById(`nav-badge-${page}`);
             if (badge) badge.textContent = counts[page];
         });
     }
 
-    // ============================================
-    // NAVIGATION & RENDERING
-    // ============================================
     navigateTo(page) {
         this.stopSpeaking();
         this.currentPage = page;
         this.currentFilter = 'all';
-        // Keep currentSearch persistent across modules
         const mod = MODULES[page];
         this.currentSort = mod.defaultSort ? { ...mod.defaultSort } : { column: null, direction: 'asc' };
         this.pagination.page = 1;
-
         document.querySelectorAll('.nav-item').forEach(item => {
             item.classList.toggle('active', item.dataset.page === page);
         });
         document.getElementById('breadcrumb-current').textContent = mod.title;
         document.getElementById('sidebar').classList.remove('open');
         document.getElementById('mobile-overlay').classList.add('hidden');
-
         this.renderPage();
         window.scrollTo(0, 0);
     }
@@ -842,25 +783,18 @@ class DashboardApp {
     renderPage() {
         const mod = MODULES[this.currentPage];
         const content = document.getElementById('page-content');
-
         let html = this.renderModuleTable(this.currentPage);
         content.innerHTML = html;
         this.updateLastUpdated();
     }
 
-    // ============================================
-    // MODULE DASHBOARD CARDS
-    // ============================================
     renderModuleDashboard(page) {
         const mod = MODULES[page];
         const records = this.data[mod.dataKey] || [];
         const filtered = this.filterRecords(records, page);
         const duplicates = this.findDuplicates(records);
         const dupCount = duplicates.size;
-
         let cards = '';
-
-        // Total Records Card
         cards += `
             <div class="dashboard-card primary">
                 <div class="dashboard-card-header">
@@ -873,8 +807,6 @@ class DashboardApp {
                 </div>
             </div>
         `;
-
-        // Duplicates Card (if any)
         if (dupCount > 0) {
             cards += `
                 <div class="dashboard-card warning" onclick="app.openDuplicateModal()">
@@ -890,8 +822,6 @@ class DashboardApp {
                 </div>
             `;
         }
-
-        // Module-specific cards
         if (page === 'alumni-info') {
             const uniqueDegrees = new Set(records.map(r => r.degree).filter(Boolean)).size;
             const uniqueCampuses = new Set(records.map(r => r.campus).filter(Boolean)).size;
@@ -950,35 +880,25 @@ class DashboardApp {
                 </div>
             `;
         }
-
         return `<div class="module-dashboard">${cards}</div>`;
     }
 
-    // ============================================
-    // TABLE RENDERING
-    // ============================================
     renderModuleTable(page) {
         const mod = MODULES[page];
         const records = this.data[mod.dataKey] || [];
-
         if (this.loadingModules.has(page)) {
             return this.renderSkeletonTable(mod);
         }
-
         if (!this.hasEndpoint(page) && records.length === 0) {
             return this.renderSetupEmptyState(page);
         }
-
         const filtered = this.filterRecords(records, page);
-
-        // Update duplicate detection based on filtered results
         this.updateDuplicateNames(filtered);
         const duplicates = this.findDuplicates(filtered);
         const dupCount = duplicates.size;
         const sorted = this.sortRecords(filtered, page);
         const paginated = this.getPaginatedRecords(sorted);
         const visibleColumns = mod.columns.filter(c => this.isColumnVisible(page, c.key));
-
         let rowsHtml = '';
         paginated.records.forEach((r, index) => {
             const isDuplicate = this.settings.showDuplicates && this.duplicateNames.has(this.getDuplicateNameKey(r));
@@ -990,34 +910,26 @@ class DashboardApp {
             if (isNew) rowClass.push('new-record');
             if (isMatched) rowClass.push('schedule-matched');
             if (isSpeaking) rowClass.push('speaking-row');
-
             rowsHtml += `<tr class="${rowClass.join(' ')}" data-speak-index="${index}">`;
             visibleColumns.forEach(col => {
                 rowsHtml += `<td>${this.renderCell(r, col, page, isMatched)}</td>`;
             });
             rowsHtml += `</tr>`;
         });
-
         let cardsHtml = '';
         paginated.records.forEach((r, index) => {
             const isMatched = this.isScheduleMatch(r, page);
             cardsHtml += this.renderRecordCard(r, page, visibleColumns, isMatched, index);
         });
-
         const freshness = this.renderFreshnessBadge(page);
-        const columnFilterDropdowns = this.renderColumnFilterDropdowns(page, records);
+        const activeFilterChips = this.renderActiveFilterChips(page);
         const duplicateBanner = dupCount > 0 ? this.renderDuplicateBanner(dupCount) : '';
         const searchCount = this.currentSearch ? `<span class="search-results-badge"><i class="fas fa-search"></i> ${filtered.length} result${filtered.length !== 1 ? 's' : ''} for "${this.escapeHtml(this.currentSearch)}"</span>` : '';
-
-        // Combined controls bar: merges old toolbar + column filters into one clean bar
         const controlsBar = `<div class="table-controls-bar">
             <div class="controls-left">
                 ${this.renderFilterTabs(page)}
                 ${freshness}
                 ${searchCount}
-            </div>
-            <div class="controls-center">
-                ${columnFilterDropdowns}
             </div>
             <div class="controls-right">
                 <div class="density-toggle">
@@ -1043,10 +955,10 @@ class DashboardApp {
                 <button class="btn btn-secondary btn-sm" onclick="app.exportCurrentModule()"><i class="fas fa-download"></i> CSV</button>
             </div>
         </div>`;
-
         return duplicateBanner +
             controlsBar +
-            (rowsHtml ? this.renderTableWrapper(visibleColumns, rowsHtml) : this.renderEmptyState('No records match your filters.')) +
+            activeFilterChips +
+            (rowsHtml ? this.renderTableWrapper(visibleColumns, rowsHtml, page) : this.renderEmptyState('No records match your filters.')) +
             `<div class="cards-view">${cardsHtml || this.renderEmptyState('No records match your filters.')}</div>` +
             this.renderPagination(paginated.total, this.pagination.page, this.pagination.perPage);
     }
@@ -1098,16 +1010,13 @@ class DashboardApp {
     renderStatsCards(stats, page, dupCount = 0) {
         let cards = '';
         cards += this.renderStatCard('Total Records', stats.total, 'total');
-
         if (page === 'legs-evaluation') {
             cards += this.renderStatCard('Complete', stats.complete, 'complete');
             cards += this.renderStatCard('Incomplete', stats.incomplete, 'incomplete');
         }
-
         if (dupCount > 0) {
             cards += this.renderStatCard('Duplicates', dupCount, 'duplicate');
         }
-
         return `<div class="cards-grid">${cards}</div>`;
     }
 
@@ -1126,13 +1035,19 @@ class DashboardApp {
         return html;
     }
 
-    renderTableWrapper(columns, rowsHtml) {
+    renderTableWrapper(columns, rowsHtml, page) {
         let headerHtml = `<thead><tr>`;
         columns.forEach(col => {
             const sortClass = col.sortable ? 'sortable' : '';
             const sortDir = this.currentSort.column === col.key ? this.currentSort.direction : '';
-            const onclick = col.sortable ? `onclick="app.sortBy('${col.key}')"` : '';
-            headerHtml += `<th class="${sortClass} ${sortDir}" ${onclick}>${col.label}</th>`;
+            const sortOnclick = col.sortable ? `onclick="app.sortBy('${col.key}')"` : '';
+            let filterIcon = '';
+            const hasActiveFilter = this.columnFilters[page] && this.columnFilters[page][col.key] && this.columnFilters[page][col.key].length > 0;
+            if (col.filterable) {
+                const filterActiveClass = hasActiveFilter ? 'filter-active' : '';
+                filterIcon = ` <span class="header-filter-icon ${filterActiveClass}" onclick="event.stopPropagation(); app.openHeaderFilterDropdown(event, '${page}', '${col.key}')" title="Filter ${col.label}"><i class="fas fa-filter"></i></span>`;
+            }
+            headerHtml += `<th class="${sortClass} ${sortDir}" ${sortOnclick}>${col.label}${filterIcon}</th>`;
         });
         headerHtml += `</tr></thead>`;
         return `<div class="table-section"><div class="table-wrapper"><table class="data-table">${headerHtml}<tbody>${rowsHtml}</tbody></table></div></div>`;
@@ -1142,7 +1057,6 @@ class DashboardApp {
         perPage = perPage || this.settings.rowsPerPage;
         const totalPages = Math.ceil(total / perPage);
         if (totalPages <= 1) return '';
-
         let pages = [];
         if (totalPages <= 5) {
             for (let i = 1; i <= totalPages; i++) pages.push(i);
@@ -1157,12 +1071,10 @@ class DashboardApp {
             if (current < totalPages - 2) pages.push('...');
             if (!pages.includes(totalPages)) pages.push(totalPages);
         }
-
         let html = `<div class="pagination">`;
         html += `<span class="pagination-info">Showing ${Math.min((current - 1) * perPage + 1, total)}–${Math.min(current * perPage, total)} of ${total}</span>`;
         html += `<div class="pagination-controls">`;
         html += `<button class="page-btn" ${current === 1 ? 'disabled' : ''} onclick="app.changePage(${current - 1})"><i class="fas fa-chevron-left"></i></button>`;
-
         pages.forEach(p => {
             if (p === '...') {
                 html += `<span class="page-btn dots" disabled>…</span>`;
@@ -1170,16 +1082,12 @@ class DashboardApp {
                 html += `<button class="page-btn ${p === current ? 'active' : ''}" onclick="app.changePage(${p})">${p}</button>`;
             }
         });
-
         html += `<button class="page-btn" ${current === totalPages ? 'disabled' : ''} onclick="app.changePage(${current + 1})"><i class="fas fa-chevron-right"></i></button>`;
-
-        // TTS Speak Button
         const speakBtnClass = this.isSpeaking ? 'speak-btn speaking' : 'speak-btn';
         const speakIcon = this.isSpeaking ? 'fa-stop' : 'fa-volume-high';
         const speakTitle = this.isSpeaking ? 'Stop reading names' : 'Read names aloud (auto-paging)';
         const speakAction = this.isSpeaking ? 'app.stopSpeaking()' : 'app.startSpeakingNames()';
         html += `<div class="speak-divider"></div><button class="page-btn ${speakBtnClass}" onclick="${speakAction}" title="${speakTitle}"><i class="fas ${speakIcon}"></i></button>`;
-
         html += `</div></div>`;
         return html;
     }
@@ -1191,12 +1099,9 @@ class DashboardApp {
         if (isDuplicate) cardClass += ' duplicate-card';
         if (isMatched) cardClass += ' schedule-matched';
         if (isSpeaking) cardClass += ' speaking-card';
-
         let rows = '';
         visibleColumns.forEach(col => {
             let rawValue = col.computed ? this.formatRow(r, col.key, page) : r[col.key];
-
-            // Build mini badge HTML separately
             let miniBadge = '';
             if (page === 'legs-participation' && col.key === 'fullName') {
                 if (isMatched) {
@@ -1205,11 +1110,8 @@ class DashboardApp {
                     miniBadge = ' <span class="mini-x" title="Date or time does not match schedule"><i class="fas fa-times"></i></span>';
                 }
             }
-
-            // Highlight search on text only, append badge as raw HTML
             const textValue = this.highlightSearch(rawValue);
             const value = textValue + miniBadge;
-
             rows += `<div class="record-card-row"><span class="record-card-label">${col.label}</span><span class="record-card-value">${value}</span></div>`;
         });
         return `<div class="record-card${cardClass}" data-speak-index="${index}"><div class="record-card-body">${rows}</div></div>`;
@@ -1218,12 +1120,14 @@ class DashboardApp {
     renderCell(r, col, page, isMatched) {
         let rawValue = col.computed ? this.formatRow(r, col.key, page) : r[col.key];
 
-        // Apply custom date formatting
         if (col.format === 'customDate' && rawValue) {
             rawValue = this.formatCustomDate(rawValue);
         }
 
-        // Build mini badge HTML separately (not escaped)
+        if (col.format === 'birthdateWithAge' && rawValue) {
+            rawValue = this.formatBirthdateWithAge(rawValue);
+        }
+
         let miniBadge = '';
         if (page === 'legs-participation' && col.key === 'fullName') {
             if (isMatched) {
@@ -1233,7 +1137,6 @@ class DashboardApp {
             }
         }
 
-        // Add duplicate badge to name column
         let dupBadge = '';
         if (col.key === 'fullName' && this.settings.showDuplicates) {
             const name = this.getDuplicateNameKey(r);
@@ -1242,11 +1145,15 @@ class DashboardApp {
             }
         }
 
-        // Highlight search on the text value only (without badges)
         const textValue = this.highlightSearch(rawValue);
 
-        // Combine: highlighted text + unescaped HTML badges
-        const value = textValue + miniBadge + dupBadge;
+        // Apply uppercase for non-email columns
+        let displayValue = textValue;
+        if (col.uppercase !== false && col.key !== 'email') {
+            displayValue = textValue.toUpperCase();
+        }
+
+        const value = displayValue + miniBadge + dupBadge;
 
         if (page === 'legs-evaluation') {
             if (col.key === 'webinar') return this.renderSelect(rawValue, DROPDOWN_OPTIONS.webinar, 'webinar', r.id, 'app.updateLegsField');
@@ -1257,16 +1164,96 @@ class DashboardApp {
             if (col.key === 'status') return this.renderBadge(rawValue);
         }
 
+        if (col.validateAddress && rawValue && !this.isValidAddressFormat(rawValue)) {
+            return `<span class="invalid-address" title="Invalid address format. Must be: Word, Word, Word (e.g., Gabawan, Odiongan, Romblon)">${value}</span>`;
+        }
+
         return value;
     }
 
     // ============================================
-    // TABLE DENSITY
+    // ADDRESS VALIDATION
     // ============================================
+    isValidAddressFormat(address) {
+        if (!address || typeof address !== 'string') return false;
+        const trimmed = address.trim();
+        // Must match exactly: Word, Word, Word (3 parts separated by comma+space)
+        // Each part should be a single word (no spaces within)
+        const regex = /^[^,\s]+,\s[^,\s]+,\s[^,\s]+$/;
+        return regex.test(trimmed);
+    }
+
+    // ============================================
+    // BIRTHDATE WITH AGE FORMATTING
+    // ============================================
+    formatBirthdateWithAge(dateInput) {
+        if (!dateInput) return '';
+        let date;
+        if (dateInput instanceof Date) {
+            date = dateInput;
+        } else if (typeof dateInput === 'string') {
+            date = new Date(dateInput);
+            if (isNaN(date.getTime())) {
+                const parts = dateInput.split(/[/\-]/);
+                if (parts.length === 3) {
+                    date = new Date(parts[2], parts[0] - 1, parts[1]);
+                    if (isNaN(date.getTime())) {
+                        date = new Date(parts[2], parts[1] - 1, parts[0]);
+                    }
+                }
+            }
+        }
+        if (!date || isNaN(date.getTime())) return String(dateInput);
+        const monthName = MONTH_NAMES[date.getMonth()];
+        const day = date.getDate();
+        const year = date.getFullYear();
+        // Calculate age
+        const today = new Date();
+        let age = today.getFullYear() - year;
+        const monthDiff = today.getMonth() - date.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+            age--;
+        }
+        return `${monthName} ${day}, ${year},(${age})`;
+    }
+
+    // ============================================
+    // MONTH FILTER HELPERS
+    // ============================================
+    getMonthFromValue(value, colKey) {
+        if (!value) return '';
+        const str = String(value).trim();
+        if (colKey === 'birthdate') {
+            const match = str.match(/^([A-Za-z]+)/);
+            if (match) return match[1];
+            const d = new Date(str);
+            if (!isNaN(d.getTime())) return MONTH_NAMES[d.getMonth()];
+        }
+        if (colKey === 'timestamp') {
+            const d = new Date(str);
+            if (!isNaN(d.getTime())) return MONTH_NAMES[d.getMonth()];
+            const parts = str.split(/[/\-]/);
+            if (parts.length >= 2) {
+                const monthNum = parseInt(parts[0], 10);
+                if (monthNum >= 1 && monthNum <= 12) return MONTH_NAMES[monthNum - 1];
+            }
+        }
+        return '';
+    }
+
+    getUniqueMonthValues(records, colKey) {
+        const months = new Set();
+        records.forEach(r => {
+            const val = colKey === 'birthdate' ? r.birthdate : r.timestamp;
+            const month = this.getMonthFromValue(val, colKey);
+            if (month) months.add(month);
+        });
+        return [...months].sort((a, b) => MONTH_NAMES.indexOf(a) - MONTH_NAMES.indexOf(b));
+    }
+
     setTableDensity(density) {
         this.settings.tableDensity = density;
         this.saveSettings();
-
         const root = document.documentElement;
         if (density === 'compact') {
             root.style.setProperty('--density', '0.7');
@@ -1275,28 +1262,19 @@ class DashboardApp {
         } else {
             root.style.setProperty('--density', '1');
         }
-
         this.renderPage();
     }
 
-    // ============================================
-    // FULLSCREEN TABLE MODE
-    // ============================================
     toggleFullscreenTable() {
         const doc = document;
         const icon = document.getElementById('fullscreen-icon');
         const btn = icon ? icon.closest('button') : null;
-
-        // Check if we're currently in native fullscreen
         const isNativeFullscreen = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
-
         if (!isNativeFullscreen) {
-            // Enter native fullscreen on the app container
             const app = document.querySelector('.app-container');
             if (app.requestFullscreen) {
                 app.requestFullscreen().catch(err => {
                     console.warn('Fullscreen denied:', err);
-                    // Fallback to CSS-only mode
                     this.enterCssFullscreen();
                 });
             } else if (app.webkitRequestFullscreen) {
@@ -1306,11 +1284,9 @@ class DashboardApp {
             } else if (app.msRequestFullscreen) {
                 app.msRequestFullscreen();
             } else {
-                // Browser doesn't support Fullscreen API — fallback to CSS
                 this.enterCssFullscreen();
             }
         } else {
-            // Exit native fullscreen
             if (doc.exitFullscreen) {
                 doc.exitFullscreen();
             } else if (doc.webkitExitFullscreen) {
@@ -1347,9 +1323,7 @@ class DashboardApp {
     handleFullscreenChange() {
         const doc = document;
         const isFullscreen = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
-
         if (isFullscreen) {
-            // Native fullscreen entered — also apply our CSS enhancements
             const app = document.querySelector('.app-container');
             app.classList.add('table-fullscreen');
             const icon = document.getElementById('fullscreen-icon');
@@ -1358,7 +1332,6 @@ class DashboardApp {
             if (btn) btn.title = 'Exit Fullscreen (Esc)';
             document.body.style.overflow = 'hidden';
         } else {
-            // Native fullscreen exited — remove CSS enhancements
             this.exitCssFullscreen();
         }
     }
@@ -1366,25 +1339,17 @@ class DashboardApp {
     exitFullscreenTable() {
         const doc = document;
         const isNativeFullscreen = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
-
         if (isNativeFullscreen) {
-            // Exit native fullscreen
             if (doc.exitFullscreen) doc.exitFullscreen();
             else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
             else if (doc.mozCancelFullScreen) doc.mozCancelFullScreen();
             else if (doc.msExitFullscreen) doc.msExitFullscreen();
         }
-
-        // Always remove CSS class
         this.exitCssFullscreen();
     }
 
-    // ============================================
-    // CUSTOM DATE FORMAT
-    // ============================================
     formatCustomDate(dateInput) {
         if (!dateInput) return '';
-
         let date;
         if (dateInput instanceof Date) {
             date = dateInput;
@@ -1397,65 +1362,39 @@ class DashboardApp {
                 }
             }
         }
-
         if (!date || isNaN(date.getTime())) return String(dateInput);
-
         const month = date.getMonth() + 1;
         const day = date.getDate();
         const year = date.getFullYear();
         const monthName = MONTH_NAMES[date.getMonth()];
-
         let hours = date.getHours();
         const minutes = date.getMinutes().toString().padStart(2, '0');
         const ampm = hours >= 12 ? 'pm' : 'am';
         hours = hours % 12;
         hours = hours ? hours : 12;
-
         return `${month}/${day}/${year}(${monthName})${hours}:${minutes}${ampm}`;
     }
 
-    // ============================================
-    // SMART SCHEDULE MATCHING — FIXED & ENHANCED
-    // ============================================
-
-    /**
-     * Robust date extraction → returns M/D/YYYY for comparison
-     */
     extractDateKey(dateInput) {
         if (!dateInput) return '';
-
-        // Already a Date object
         if (dateInput instanceof Date) {
             return (dateInput.getMonth() + 1) + '/' + dateInput.getDate() + '/' + dateInput.getFullYear();
         }
-
         const str = String(dateInput).trim();
-
-        // US format: 5/14/2026
         const usMatch = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
         if (usMatch) return parseInt(usMatch[1], 10) + '/' + parseInt(usMatch[2], 10) + '/' + usMatch[3];
-
-        // ISO format: 2026-05-14
         const isoMatch = str.match(/(\d{4})-(\d{2})-(\d{2})/);
         if (isoMatch) return parseInt(isoMatch[2], 10) + '/' + parseInt(isoMatch[3], 10) + '/' + isoMatch[1];
-
-        // Fallback: native Date parsing
         const d = new Date(str);
         if (!isNaN(d.getTime())) {
             return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
         }
-
         return '';
     }
 
-    /**
-     * Extract date from schedule text: "May 14, 2026 - 8:00 a.m. - 12:00 p.m."
-     */
     extractScheduleDateKey(scheduleStr) {
         if (!scheduleStr) return '';
         const str = String(scheduleStr);
-
-        // "May 14, 2026"
         const m = str.match(/([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})/);
         if (m) {
             const names = ['january','february','march','april','may','june',
@@ -1463,11 +1402,8 @@ class DashboardApp {
             const idx = names.indexOf(m[1].toLowerCase());
             if (idx >= 0) return (idx + 1) + '/' + m[2] + '/' + m[3];
         }
-
-        // Fallback: MM/DD/YYYY hiding in the schedule string
         const usMatch = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
         if (usMatch) return parseInt(usMatch[1], 10) + '/' + parseInt(usMatch[2], 10) + '/' + usMatch[3];
-
         return '';
     }
 
@@ -1484,55 +1420,34 @@ class DashboardApp {
         return ts && sc && ts === sc;
     }
 
-    /**
-     * Smart time-in-range check with multi-format parsing + grace periods
-     */
     isTimeInRange(timestamp, schedule) {
         if (!timestamp || !schedule) return false;
-
-        // --- Parse schedule range ---
         const schedMatch = String(schedule).match(
             /(\d{1,2}):(\d{2})\s*(a\.?m\.?|p\.?m\.?)\s*-\s*(\d{1,2}):(\d{2})\s*(a\.?m\.?|p\.?m\.?)/i
         );
         if (!schedMatch) return false;
-
         const sH   = parseInt(schedMatch[1], 10);
         const sM   = parseInt(schedMatch[2], 10);
-        const sAmpm = schedMatch[3].toLowerCase().replace(/\./g, ''); // strip ALL dots
+        const sAmpm = schedMatch[3].toLowerCase().replace(/\./g, '');
         const eH   = parseInt(schedMatch[4], 10);
         const eM   = parseInt(schedMatch[5], 10);
-        const eAmpm = schedMatch[6].toLowerCase().replace(/\./g, ''); // strip ALL dots
-
+        const eAmpm = schedMatch[6].toLowerCase().replace(/\./g, '');
         const schedStart = this.toMinutes(sH, sM, sAmpm);
         const schedEnd   = this.toMinutes(eH, eM, eAmpm);
-
-        // --- Parse timestamp time ---
         const tsMinutes = this.extractTimestampMinutes(timestamp);
         if (tsMinutes === null) return false;
-
-        // --- Smart grace periods ---
-        // 15 min before start  → early arrivals still count
-        // 30 min after end    → handles clock skew / stragglers
         const graceBefore = 15;
         const graceAfter  = 30;
-
         return tsMinutes >= (schedStart - graceBefore) && tsMinutes <= (schedEnd + graceAfter);
     }
 
-    /**
-     * Extract minutes-since-midnight from a timestamp using multiple strategies
-     */
     extractTimestampMinutes(timestamp) {
         if (!timestamp) return null;
         const tsStr = String(timestamp).trim();
-
-        // Strategy 1: already formatted 12-hour (e.g., "10:42am", "9:20 am")
         const match12 = tsStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i);
         if (match12) {
             return this.toMinutes(parseInt(match12[1], 10), parseInt(match12[2], 10), match12[3].toLowerCase());
         }
-
-        // Strategy 2: Date object or standard date string
         let d = null;
         if (timestamp instanceof Date) {
             d = timestamp;
@@ -1542,30 +1457,20 @@ class DashboardApp {
         if (d && !isNaN(d.getTime())) {
             return d.getHours() * 60 + d.getMinutes();
         }
-
-        // Strategy 3: 24-hour with seconds (e.g., "10:42:00", "14:30:00")
         const match24Full = tsStr.match(/\b(\d{1,2}):(\d{2}):(\d{2})\b/);
         if (match24Full) {
             return parseInt(match24Full[1], 10) * 60 + parseInt(match24Full[2], 10);
         }
-
-        // Strategy 4: 24-hour without seconds (e.g., "10:42", "14:30")
         const match24Short = tsStr.match(/\b(\d{1,2}):(\d{2})\b/);
         if (match24Short) {
             const h = parseInt(match24Short[1], 10);
             if (h >= 0 && h <= 23) return h * 60 + parseInt(match24Short[2], 10);
         }
-
         return null;
     }
 
-    /**
-     * Convert 12-hour components → minutes since midnight
-     * Handles "am", "a.m.", "pm", "p.m.", "PM", etc.
-     */
     toMinutes(h, m, ampm) {
         let hour = parseInt(h, 10) % 12;
-        // If it starts with 'p' → PM (catches pm, p.m., PM, etc.)
         if (ampm && ampm.charAt(0) === 'p') hour += 12;
         return hour * 60 + parseInt(m, 10);
     }
@@ -1595,13 +1500,11 @@ class DashboardApp {
     getDuplicateNameKey(r) {
         const name = this.getFullName(r);
         if (!name || typeof name !== 'string') return '';
-        // Smart duplicate normalization: strip trailing N/A/NA placeholders,
-        // collapse whitespace, lowercase for reliable comparison
         return name
-            .replace(/\s+N\/A\s*$/i, '')      // trailing " N/A"
-            .replace(/\s+NA\s*$/i, '')        // trailing " NA"
-            .replace(/\s+N\.A\.\s*$/i, '')   // trailing " N.A."
-            .replace(/\s+/g, ' ')              // collapse multiple spaces
+            .replace(/\s+N\/A\s*$/i, '')
+            .replace(/\s+NA\s*$/i, '')
+            .replace(/\s+N\.A\.\s*$/i, '')
+            .replace(/\s+/g, ' ')
             .toLowerCase()
             .trim();
     }
@@ -1696,153 +1599,122 @@ class DashboardApp {
         return `${Math.floor(hours / 24)}d ago`;
     }
 
-    // ============================================
-    // CASCADING (DEPENDENT) FILTER HELPERS
-    // ============================================
-
-    /**
-     * Returns records filtered by all active constraints EXCEPT the given column.
-     * Used to populate contextual dropdown options for dependent filters.
-     */
-    getContextualRecordsForFilter(page, allRecords, currentColKey) {
-        let filtered = [...allRecords];
+    renderActiveFilterChips(page) {
+        const pageFilters = this.columnFilters[page];
+        if (!pageFilters || Object.keys(pageFilters).length === 0) return '';
         const mod = MODULES[page];
-
-        // Apply status/tab filter
-        if (this.currentFilter !== 'all') {
-            if (page === 'legs-participation' && this.currentFilter === 'green checks') {
-                filtered = filtered.filter(r => this.isScheduleMatch(r, page));
+        let chipsHtml = '';
+        Object.keys(pageFilters).forEach(colKey => {
+            const allowedValues = pageFilters[colKey];
+            if (!allowedValues || allowedValues.length === 0) return;
+            const col = mod.columns.find(c => c.key === colKey);
+            if (!col) return;
+            let chipLabel = '';
+            if (allowedValues.length === 1) {
+                chipLabel = `${col.label} : ${allowedValues[0]}`;
             } else {
-                filtered = filtered.filter(r => (r.status || '').toLowerCase() === this.currentFilter);
+                chipLabel = `${col.label} : Multiple Values`;
             }
-        }
-
-        // Apply other column filters (excluding current)
-        const pageFilters = this.columnFilters[page];
-        if (pageFilters) {
-            Object.keys(pageFilters).forEach(colKey => {
-                if (colKey === currentColKey) return;
-                const allowedValues = pageFilters[colKey];
-                if (allowedValues && allowedValues.length > 0) {
-                    const col = mod.columns.find(c => c.key === colKey);
-                    filtered = filtered.filter(r => {
-                        const val = col.computed ? this.formatRow(r, colKey, page) : r[colKey];
-                        return allowedValues.includes(String(val || '').trim());
-                    });
-                }
-            });
-        }
-
-        // Apply global search
-        if (this.currentSearch) {
-            const search = this.currentSearch.toLowerCase();
-            filtered = filtered.filter(r => {
-                return mod.columns.some(col => {
-                    const val = col.computed ? this.formatRow(r, col.key, page) : r[col.key];
-                    return String(val).toLowerCase().includes(search);
-                });
-            });
-        }
-
-        return filtered;
-    }
-
-    /**
-     * When a parent filter changes, remove dependent selections that no longer exist.
-     */
-    clearInvalidDependentFilters(page, changedColKey) {
-        const mod = MODULES[page];
-        const pageFilters = this.columnFilters[page];
-        if (!pageFilters) return;
-
-        // Find columns that depend on the changed column
-        const dependentCols = mod.columns.filter(c => c.dependsOn === changedColKey);
-        if (!dependentCols.length) return;
-
-        const allRecords = this.data[mod.dataKey] || [];
-
-        dependentCols.forEach(depCol => {
-            const depKey = depCol.key;
-            const depFilters = pageFilters[depKey];
-            if (!depFilters || depFilters.length === 0) return;
-
-            // Valid values for dependent column given current parent + other filters
-            const contextualRecords = this.getContextualRecordsForFilter(page, allRecords, depKey);
-            const validValues = [...new Set(contextualRecords.map(r => {
-                const val = depCol.computed ? this.formatRow(r, depKey, page) : r[depKey];
-                return String(val || '').trim();
-            }).filter(v => v))];
-
-            const validSelections = depFilters.filter(v => validValues.includes(v));
-            if (validSelections.length === 0) {
-                delete pageFilters[depKey];
-            } else if (validSelections.length !== depFilters.length) {
-                pageFilters[depKey] = validSelections;
-            }
+            chipsHtml += `
+                <span class="filter-chip" onclick="app.openHeaderFilterDropdown(event, '${page}', '${col.key}')">
+                    ${this.escapeHtml(chipLabel)}
+                    <i class="fas fa-times chip-remove" onclick="event.stopPropagation(); app.clearColumnFilter('${page}', '${col.key}')"></i>
+                </span>
+            `;
         });
-
-        this.saveColumnFilters();
+        if (!chipsHtml) return '';
+        return `
+            <div class="active-filters-bar">
+                <span class="filters-label"><i class="fas fa-filter"></i> Filters</span>
+                ${chipsHtml}
+                <button class="clear-all-btn" onclick="app.clearAllFilters('${page}')">Clear All</button>
+            </div>
+        `;
     }
 
-    // ============================================
-    // COLUMN FILTER DROPDOWNS
-    // ============================================
-    renderColumnFilterDropdowns(page, allRecords) {
+    clearAllFilters(page) {
+        this.stopSpeaking();
+        if (this.columnFilters[page]) {
+            delete this.columnFilters[page];
+        }
+        this.saveColumnFilters();
+        this.pagination.page = 1;
+        this.renderPage();
+        this.showToast('All filters cleared', 'info');
+    }
+
+    openHeaderFilterDropdown(event, page, colKey) {
+        event.stopPropagation();
+        document.querySelectorAll('.header-filter-dropdown').forEach(d => d.remove());
         const mod = MODULES[page];
-        const filterableCols = mod.columns.filter(c => c.filterable);
-        if (!filterableCols.length) return '';
+        const col = mod.columns.find(c => c.key === colKey);
+        if (!col || !col.filterable) return;
+        const records = this.data[mod.dataKey] || [];
 
-        let html = `<div class="column-filters-bar">`;
-        filterableCols.forEach(col => {
-            // ⬇️ CONTEXTUAL OPTIONS: dependent columns only show values that exist
-            // within the currently filtered dataset (respecting parent filters)
-            const sourceRecords = col.dependsOn
-                ? this.getContextualRecordsForFilter(page, allRecords, col.key)
-                : allRecords;
-
-            const uniqueValues = [...new Set(sourceRecords.map(r => {
+        // For month-based filters (birthdate, timestamp), show month names
+        let uniqueValues;
+        if (col.filterType === 'month') {
+            uniqueValues = this.getUniqueMonthValues(records, colKey);
+        } else {
+            uniqueValues = [...new Set(records.map(r => {
                 const val = col.computed ? this.formatRow(r, col.key, page) : r[col.key];
                 return String(val || '').trim();
             }).filter(v => v))].sort();
+        }
 
-            const activeFilters = (this.columnFilters[page] && this.columnFilters[page][col.key]) || [];
-            const hasActive = activeFilters.length > 0;
-            const activeClass = hasActive ? 'btn-primary' : 'btn-secondary';
-            const countBadge = hasActive ? `<span class="filter-count">${activeFilters.length}</span>` : '';
-
-            html += `
-                <div class="column-filter-item">
-                    <button class="btn btn-sm ${activeClass}" onclick="app.toggleFilterDropdown(event, '${page}', '${col.key}')">
-                        <i class="fas fa-filter"></i> ${col.label}${countBadge} <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <div class="filter-dropdown" id="filter-dd-${page}-${col.key}">
-                        <div class="filter-dropdown-header">
-                            <label><input type="checkbox" ${activeFilters.length === uniqueValues.length ? 'checked' : ''} onchange="app.toggleAllFilterValues('${page}', '${col.key}', this.checked, ${JSON.stringify(uniqueValues).replace(/"/g, '&quot;')})"> Select All (${uniqueValues.length})</label>
-                            <button class="btn-clear" onclick="app.clearColumnFilter('${page}', '${col.key}')">Clear</button>
-                        </div>
-                        <div class="filter-dropdown-body">
-                            ${uniqueValues.map(val => `
-                                <label class="filter-option">
-                                    <input type="checkbox" ${activeFilters.includes(val) ? 'checked' : ''} onchange="app.toggleFilterValue('${page}', '${col.key}', '${this.escapeHtml(val)}', this.checked)">
-                                    <span>${this.escapeHtml(val)}</span>
-                                </label>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
+        const activeFilters = (this.columnFilters[page] && this.columnFilters[page][colKey]) || [];
+        let optionsHtml = '';
+        uniqueValues.forEach(val => {
+            const checked = activeFilters.includes(val) ? 'checked' : '';
+            optionsHtml += `
+                <label class="filter-dropdown-option">
+                    <input type="checkbox" ${checked} onchange="app.toggleFilterValue('${page}', '${colKey}', '${this.escapeHtml(val)}', this.checked)">
+                    <span>${this.escapeHtml(val)}</span>
+                </label>
             `;
         });
-        html += `</div>`;
-        return html;
-    }
-
-    toggleFilterDropdown(event, page, colKey) {
-        event.stopPropagation();
-        const id = `filter-dd-${page}-${colKey}`;
-        const el = document.getElementById(id);
-        const isOpen = el.classList.contains('open');
-        document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('open'));
-        if (!isOpen) el.classList.add('open');
+        const dropdownHtml = `
+            <div class="header-filter-dropdown" id="header-filter-dd-${page}-${colKey}">
+                <div class="header-filter-dropdown-header">
+                    <span><i class="fas fa-filter"></i> ${col.label}</span>
+                    <button class="btn-clear" onclick="event.stopPropagation(); app.clearColumnFilter('${page}', '${colKey}')">Clear</button>
+                </div>
+                <div class="header-filter-dropdown-body">
+                    ${optionsHtml}
+                </div>
+                <div class="header-filter-dropdown-footer">
+                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); document.querySelectorAll('.header-filter-dropdown').forEach(d => d.remove())">Close</button>
+                </div>
+            </div>
+        `;
+        const target = event.target.closest('.header-filter-icon') || event.target.closest('.filter-chip');
+        if (target) {
+            const rect = target.getBoundingClientRect();
+            const container = document.createElement('div');
+            container.innerHTML = dropdownHtml;
+            const dropdown = container.firstElementChild;
+            dropdown.style.position = 'fixed';
+            dropdown.style.top = (rect.bottom + 4) + 'px';
+            dropdown.style.left = rect.left + 'px';
+            dropdown.style.minWidth = '220px';
+            dropdown.style.maxHeight = '320px';
+            dropdown.style.zIndex = '10000';
+            document.body.appendChild(dropdown);
+            const ddRect = dropdown.getBoundingClientRect();
+            if (ddRect.right > window.innerWidth) {
+                dropdown.style.left = (window.innerWidth - ddRect.width - 10) + 'px';
+            }
+            if (ddRect.bottom > window.innerHeight) {
+                dropdown.style.top = (rect.top - ddRect.height - 4) + 'px';
+            }
+            const closeHandler = (e) => {
+                if (!dropdown.contains(e.target)) {
+                    dropdown.remove();
+                    document.removeEventListener('click', closeHandler);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeHandler), 0);
+        }
     }
 
     toggleFilterValue(page, colKey, value, checked) {
@@ -1855,27 +1727,6 @@ class DashboardApp {
         if (!checked && idx > -1) arr.splice(idx, 1);
         if (arr.length === 0) delete this.columnFilters[page][colKey];
         this.saveColumnFilters();
-
-        // ⬇️ NEW: clear dependent filters that are no longer valid
-        this.clearInvalidDependentFilters(page, colKey);
-
-        this.pagination.page = 1;
-        this.renderPage();
-    }
-
-    toggleAllFilterValues(page, colKey, checked, values) {
-        this.stopSpeaking();
-        if (!this.columnFilters[page]) this.columnFilters[page] = {};
-        if (checked) {
-            this.columnFilters[page][colKey] = [...values];
-        } else {
-            delete this.columnFilters[page][colKey];
-        }
-        this.saveColumnFilters();
-
-        // ⬇️ NEW: clear dependent filters that are no longer valid
-        this.clearInvalidDependentFilters(page, colKey);
-
         this.pagination.page = 1;
         this.renderPage();
     }
@@ -1884,21 +1735,12 @@ class DashboardApp {
         this.stopSpeaking();
         if (this.columnFilters[page]) delete this.columnFilters[page][colKey];
         this.saveColumnFilters();
-
-        // ⬇️ NEW: clearing a parent filter may also change dependent options
-        this.clearInvalidDependentFilters(page, colKey);
-
         this.pagination.page = 1;
         this.renderPage();
     }
 
-    // ============================================
-    // FILTERING (includes column filters)
-    // ============================================
     filterRecords(records, page) {
         let filtered = [...records];
-
-        // Status filter tabs
         if (this.currentFilter !== 'all') {
             if (page === 'legs-participation' && this.currentFilter === 'green checks') {
                 filtered = filtered.filter(r => this.isScheduleMatch(r, page));
@@ -1906,8 +1748,6 @@ class DashboardApp {
                 filtered = filtered.filter(r => (r.status || '').toLowerCase() === this.currentFilter);
             }
         }
-
-        // Column-specific filters
         const pageFilters = this.columnFilters[page];
         if (pageFilters) {
             Object.keys(pageFilters).forEach(colKey => {
@@ -1915,20 +1755,29 @@ class DashboardApp {
                 if (allowedValues && allowedValues.length > 0) {
                     const col = MODULES[page].columns.find(c => c.key === colKey);
                     filtered = filtered.filter(r => {
-                        const val = col.computed ? this.formatRow(r, colKey, page) : r[colKey];
-                        return allowedValues.includes(String(val || '').trim());
+                        let val;
+                        if (col.filterType === 'month') {
+                            // For month filters, extract month from the raw value
+                            const rawVal = col.computed ? this.formatRow(r, colKey, page) : r[colKey];
+                            val = this.getMonthFromValue(rawVal, colKey);
+                        } else {
+                            val = col.computed ? this.formatRow(r, colKey, page) : r[colKey];
+                            val = String(val || '').trim();
+                        }
+                        return allowedValues.includes(val);
                     });
                 }
             });
         }
-
-        // Global search
         if (this.currentSearch) {
             const search = this.currentSearch.toLowerCase();
             const mod = MODULES[page];
             filtered = filtered.filter(r => {
                 return mod.columns.some(col => {
-                    const val = col.computed ? this.formatRow(r, col.key, page) : r[col.key];
+                    let val = col.computed ? this.formatRow(r, col.key, page) : r[col.key];
+                    if (col.format === 'birthdateWithAge' && val) {
+                        val = this.formatBirthdateWithAge(val);
+                    }
                     return String(val).toLowerCase().includes(search);
                 });
             });
@@ -1937,21 +1786,26 @@ class DashboardApp {
     }
 
     sortRecords(records, page) {
-        if (!this.currentSort.column) {
-            return records.sort((a, b) => {
-                const nameA = (a.fullName || this.getFullName(a)).toLowerCase();
-                const nameB = (b.fullName || this.getFullName(b)).toLowerCase();
-                return nameA.localeCompare(nameB);
-            });
-        }
-        const col = MODULES[page].columns.find(c => c.key === this.currentSort.column);
+        // Always sort by fullName ascending first, then by current sort column
         return records.sort((a, b) => {
-            let valA = col.computed ? this.formatRow(a, col.key, page) : a[col.key];
-            let valB = col.computed ? this.formatRow(b, col.key, page) : b[col.key];
-            valA = String(valA || '').toLowerCase();
-            valB = String(valB || '').toLowerCase();
-            if (valA < valB) return this.currentSort.direction === 'asc' ? -1 : 1;
-            if (valA > valB) return this.currentSort.direction === 'asc' ? 1 : -1;
+            // Primary sort: fullName alphabetically
+            const nameA = (a.fullName || this.getFullName(a)).toLowerCase();
+            const nameB = (b.fullName || this.getFullName(b)).toLowerCase();
+            const nameCompare = nameA.localeCompare(nameB);
+            if (nameCompare !== 0) return nameCompare;
+
+            // Secondary sort: by currentSort column if different from fullName
+            if (this.currentSort.column && this.currentSort.column !== 'fullName') {
+                const col = MODULES[page].columns.find(c => c.key === this.currentSort.column);
+                if (col) {
+                    let valA = col.computed ? this.formatRow(a, col.key, page) : a[col.key];
+                    let valB = col.computed ? this.formatRow(b, col.key, page) : b[col.key];
+                    valA = String(valA || '').toLowerCase();
+                    valB = String(valB || '').toLowerCase();
+                    if (valA < valB) return this.currentSort.direction === 'asc' ? -1 : 1;
+                    if (valA > valB) return this.currentSort.direction === 'asc' ? 1 : -1;
+                }
+            }
             return 0;
         });
     }
@@ -1973,9 +1827,6 @@ class DashboardApp {
         return stats;
     }
 
-    // ============================================
-    // LEGS EVALUATION UPDATES
-    // ============================================
     updateLegsField(id, field, value) {
         const record = this.data.legsEvaluation.find(r => r.id === id);
         if (!record) return;
@@ -1991,9 +1842,6 @@ class DashboardApp {
         return hasAll ? 'Complete' : 'Incomplete';
     }
 
-    // ============================================
-    // EXPORT
-    // ============================================
     exportCurrentModule() {
         const page = this.currentPage;
         const mod = MODULES[page];
@@ -2001,22 +1849,20 @@ class DashboardApp {
         let filtered = this.filterRecords(records, page);
         filtered = this.sortRecords(filtered, page);
         const visibleColumns = mod.columns.filter(c => this.isColumnVisible(page, c.key));
-
         const exportData = filtered.map(r => {
             const obj = {};
             visibleColumns.forEach(col => {
                 let val = col.computed ? this.formatRow(r, col.key, page) : r[col.key];
                 if (col.format === 'customDate' && val) val = this.formatCustomDate(val);
+                if (col.format === 'birthdateWithAge' && val) val = this.formatBirthdateWithAge(val);
                 obj[col.label] = val;
             });
             return obj;
         });
-
         if (!exportData.length) {
             this.showToast('No data to export', 'error');
             return;
         }
-
         const headers = Object.keys(exportData[0]);
         const csv = [headers.join(',')];
         exportData.forEach(row => {
@@ -2031,9 +1877,6 @@ class DashboardApp {
         this.showToast('CSV exported successfully');
     }
 
-    // ============================================
-    // UI ACTIONS
-    // ============================================
     setFilter(filter) {
         this.stopSpeaking();
         this.currentFilter = filter;
@@ -2184,7 +2027,6 @@ class DashboardApp {
         if (type === 'error') icon = 'fa-circle-xmark';
         if (type === 'warning') icon = 'fa-triangle-exclamation';
         if (type === 'info') icon = 'fa-info-circle';
-
         toast.innerHTML = `<i class="fas ${icon}"></i><span>${this.escapeHtml(message)}</span>`;
         container.appendChild(toast);
         requestAnimationFrame(() => toast.classList.add('show'));
@@ -2206,10 +2048,6 @@ class DashboardApp {
         const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         document.getElementById('last-updated').textContent = `Updated ${timeStr}`;
     }
-
-    // ============================================
-    // EVENT BINDING
-    // ============================================
 
     initSearchClear() {
         const input = document.getElementById('global-search');
@@ -2266,7 +2104,6 @@ class DashboardApp {
             }
         });
 
-        // Search clear button visibility
         const searchInput = document.getElementById('global-search');
         const searchClear = document.getElementById('search-clear-btn');
         if (searchInput && searchClear) {
@@ -2279,7 +2116,6 @@ class DashboardApp {
             });
         }
 
-        // Listen for native fullscreen change events (F11, Esc, button click)
         document.addEventListener('fullscreenchange', () => this.handleFullscreenChange());
         document.addEventListener('webkitfullscreenchange', () => this.handleFullscreenChange());
         document.addEventListener('mozfullscreenchange', () => this.handleFullscreenChange());
