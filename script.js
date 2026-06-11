@@ -250,51 +250,65 @@ class DashboardApp {
         }
     }
 
-    async loadEndpointsGlobal() {
-        let configUrl = localStorage.getItem('dashboard_config_endpoint');
-        if (!configUrl && CONFIG.DEFAULT_CONFIG_URL) {
-            configUrl = CONFIG.DEFAULT_CONFIG_URL;
-        }
-        if (!configUrl) return;
-        try {
-            const res = await fetch(configUrl + '?action=getEndpoints', { redirect: 'follow' });
-            const data = await res.json();
-            if (data.success && data.endpoints) {
-                this.endpoints = data.endpoints;
-                localStorage.setItem('dashboard_endpoints', JSON.stringify(this.endpoints));
-                this.showToast('URLs loaded from Google Sheet', 'success');
-            }
-        } catch (err) {
-            console.warn('Global load failed:', err);
-        }
+async loadEndpointsGlobal() {
+    let configUrl = localStorage.getItem('dashboard_config_endpoint');
+    if (!configUrl && CONFIG.DEFAULT_CONFIG_URL) {
+        configUrl = CONFIG.DEFAULT_CONFIG_URL;
     }
+    if (!configUrl) return;
 
-    saveEndpointsToStorage() {
-        localStorage.setItem('dashboard_endpoints', JSON.stringify(this.endpoints));
-        this.saveEndpointsGlobal();
-    }
+    try {
+        const url = new URL(configUrl);
+        url.searchParams.set('action', 'getEndpoints');
+        
+        const res = await fetch(url.toString(), { redirect: 'follow' });
+        const data = await res.json();
 
-    async saveEndpointsGlobal() {
-        let configUrl = localStorage.getItem('dashboard_config_endpoint');
-        if (!configUrl && CONFIG.DEFAULT_CONFIG_URL) {
-            configUrl = CONFIG.DEFAULT_CONFIG_URL;
+        if (data.success && data.endpoints) {
+            this.endpoints = { ...this.endpoints, ...data.endpoints };
+            this.saveEndpointsToStorage();
+            console.log('Global endpoints loaded:', this.endpoints);
         }
-        if (!configUrl) return;
-        try {
-            const params = new URLSearchParams();
-            params.set('action', 'saveEndpoints');
-            Object.entries(this.endpoints).forEach(([key, val]) => {
-                if (val) params.set('ep-' + key.replace('alumni-info','alumni').replace('nsrp-registration','nsrp').replace('jops-evaluation','jops').replace('legs-participation','legs-part').replace('legs-evaluation','legs-eval'), val);
-            });
-            const response = await fetch(configUrl + '?' + params.toString(), { redirect: 'follow' });
-            const result = await response.json();
-            if (result.success) {
-                this.showToast('URLs saved to Google Sheet', 'success');
-            }
-        } catch (err) {
-            console.warn('Global save failed:', err);
-        }
+    } catch (err) {
+        console.warn('Global load failed:', err);
     }
+}
+
+async saveEndpointsGlobal() {
+    let configUrl = localStorage.getItem('dashboard_config_endpoint');
+    if (!configUrl && CONFIG.DEFAULT_CONFIG_URL) {
+        configUrl = CONFIG.DEFAULT_CONFIG_URL;
+    }
+    if (!configUrl) return;
+
+    try {
+        const url = new URL(configUrl);
+        url.searchParams.set('action', 'saveEndpoints');
+        
+        Object.entries(this.endpoints).forEach(([key, val]) => {
+            if (val) {
+                const paramKey = 'ep-' + key
+                    .replace('alumni-info', 'alumni')
+                    .replace('nsrp-registration', 'nsrp')
+                    .replace('jops-evaluation', 'jops')
+                    .replace('legs-participation', 'legs-part')
+                    .replace('legs-evaluation', 'legs-eval');
+                url.searchParams.set(paramKey, val);
+            }
+        });
+
+        const response = await fetch(url.toString(), { redirect: 'follow' });
+        const result = await response.json();
+
+        if (result.success) {
+            console.log('Global endpoints saved successfully');
+        } else {
+            console.warn('Global save returned error:', result.message);
+        }
+    } catch (err) {
+        console.warn('Global save failed:', err);
+    }
+}
 
     loadLastFetch() {
         const lf = localStorage.getItem('dashboard_last_fetch');
