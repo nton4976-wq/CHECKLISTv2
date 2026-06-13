@@ -42,7 +42,9 @@ const MODULES = {
         { key: 'firstGenCollege', label: 'First Gen College',      sortable: true, filterable: true },
         { key: 'degree',          label: 'Degree Completed at RSU', sortable: true, filterable: true },
         { key: 'yearGraduated',   label: 'Year Graduated',          sortable: true, filterable: true },
-        { key: 'campus',          label: 'Campus',                  sortable: true, filterable: true }
+        { key: 'campus',          label: 'Campus',                  sortable: true, filterable: true },
+        { key: 'position',        label: 'Position',                sortable: true, filterable: true },
+        { key: 'employer',        label: 'Employer',                sortable: true, filterable: true }
     ]
 },
     'nsrp-registration': {
